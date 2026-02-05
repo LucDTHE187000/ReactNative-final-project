@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import {
   FlatList,
   StyleSheet,
@@ -5,10 +6,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
 const FIELDS = [
   { id: "1", name: "Sân Bao Cấp", price: "450k / giờ", type: "Sân 7" },
   { id: "2", name: "Sân 5 Cửa Ô", price: "420k / giờ", type: "Sân 5" },
+  { id: "3", name: "Sân Thống Nhất", price: "500k / giờ", type: "Sân 11" },
+  { id: "4", name: "Sân Quận 1", price: "400k / giờ", type: "Sân 7" },
+  { id: "5", name: "Sân Phú Nhuận", price: "350k / giờ", type: "Sân 5" },
+  { id: "6", name: "Sân Gò Vấp", price: "300k / giờ", type: "Sân 7" },
+  { id: "7", name: "Sân Tân Bình", price: "380k / giờ", type: "Sân 5" },
+  { id: "8", name: "Sân Bình Thạnh", price: "360k / giờ", type: "Sân 7" },
+  { id: "9", name: "Sân Quận 3", price: "410k / giờ", type: "Sân 11" },
+  { id: "10", name: "Sân Quận 10", price: "390k / giờ", type: "Sân 5" },
 ];
 
 export default function HomeScreen() {
@@ -28,7 +36,10 @@ export default function HomeScreen() {
               <Text style={styles.price}>{item.price}</Text>
             </View>
 
-            <TouchableOpacity style={styles.button}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => router.push(`/booking/${item.id}`)}
+            >
               <Text style={styles.buttonText}>Đặt sân</Text>
             </TouchableOpacity>
           </View>
