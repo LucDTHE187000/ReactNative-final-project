@@ -1,22 +1,24 @@
 const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-require("dotenv").config();
+const router = express.Router();
+const bookingController = require("../controllers/bookingController");
+const { protect, admin } = require("../middleware/authMiddleware");
 
-const app = express();
+// 📌 Create booking (user must be logged in)
+router.post("/", protect, bookingController.createBooking);
 
-app.use(cors());
-app.use(express.json());
+// 📌 Get user's bookings
+router.get("/my-bookings", protect, bookingController.getUserBookings);
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log(err));
+// 📌 Get bookings by date (public)
+router.get("/by-date", bookingController.getBookingsByDate);
 
-app.get("/", (req, res) => {
-  res.json({ message: "API is running" });
-});
+// 📌 Cancel booking (user)
+router.put("/:id/cancel", protect, bookingController.cancelBooking);
 
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// 📌 Get all bookings (admin only)
+router.get("/", protect, admin, bookingController.getAllBookings);
+
+// 📌 Update booking status (admin only)
+router.put("/:id/status", protect, admin, bookingController.updateBookingStatus);
+
+module.exports = router;
