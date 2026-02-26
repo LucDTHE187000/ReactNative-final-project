@@ -1,36 +1,61 @@
-import { View, Text } from "react-native";
-import { Picker } from "@react-native-picker/picker";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-type Props = {
+interface Props {
   start: number;
   end: number;
   onStartChange: (v: number) => void;
   onEndChange: (v: number) => void;
-};
+  isHourBooked: (hour: number) => boolean;
+}
 
 export default function TimePicker({
   start,
   end,
   onStartChange,
   onEndChange,
+  isHourBooked,
 }: Props) {
-  const hours = Array.from({ length: 24 }, (_, i) => i);
+
+  // ví dụ mở từ 6h đến 23h
+  const hours = Array.from({ length: 18 }, (_, i) => i + 6);
 
   return (
-    <View style={{ marginVertical: 12 }}>
-      <Text>Giờ bắt đầu</Text>
-      <Picker selectedValue={start} onValueChange={onStartChange}>
-        {hours.map((h) => (
-          <Picker.Item key={h} label={`${h}:00`} value={h} />
-        ))}
-      </Picker>
+    <ScrollView style={{ maxHeight: 300 }}>
+      {hours.map((hour) => {
+        const booked = isHourBooked(hour);
 
-      <Text>Giờ kết thúc</Text>
-      <Picker selectedValue={end} onValueChange={onEndChange}>
-        {hours.map((h) => (
-          <Picker.Item key={h} label={`${h}:00`} value={h} />
-        ))}
-      </Picker>
-    </View>
+        return (
+          <TouchableOpacity
+            key={hour}
+            disabled={booked}
+            style={[
+              styles.hour,
+              booked && styles.booked,
+              start === hour && styles.selected,
+            ]}
+            onPress={() => onStartChange(hour)}
+          >
+            <Text style={booked && { color: "#999" }}>
+              {hour}:00
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  hour: {
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 10,
+    backgroundColor: "#eee",
+  },
+  booked: {
+    backgroundColor: "#ddd",
+  },
+  selected: {
+    backgroundColor: "#4CAF50",
+  },
+});
