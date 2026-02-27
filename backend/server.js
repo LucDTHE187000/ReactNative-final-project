@@ -9,6 +9,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 📁 Serve static files (images)
+const path = require("path");
+app.use("/images", express.static(path.join(__dirname, "uploads/images")));
+
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))

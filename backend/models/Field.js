@@ -22,7 +22,17 @@ const fieldSchema = new mongoose.Schema(
     pricePerHour: {
       type: Number,
       required: true,
+      default: 0,
     },
+    // Giá theo khung giờ
+    priceSchedule: [
+      {
+        name: String, // "Sáng", "Cao điểm", "VIP"
+        startHour: Number, // 6
+        endHour: Number, // 14
+        price: Number, // 400000
+      },
+    ],
     capacity: {
       type: Number,
       default: 1,
