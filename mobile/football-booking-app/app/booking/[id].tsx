@@ -22,6 +22,12 @@ interface Field {
   type: string;
   pricePerHour: number;
   location: string;
+  priceSchedule?: Array<{
+    name: string;
+    startHour: number;
+    endHour: number;
+    price: number;
+  }>;
 }
 
 export default function BookingDetail() {
@@ -123,7 +129,21 @@ export default function BookingDetail() {
       }
     }
 
-    const total = field.pricePerHour * (end - start);
+    // 💰 Tính giá dựa trên priceSchedule
+    let totalPrice = 0;
+    if (field.priceSchedule && field.priceSchedule.length > 0) {
+      for (let hour = start; hour < end; hour++) {
+        const slot = field.priceSchedule.find(
+          (s) => hour >= s.startHour && hour < s.endHour
+        );
+        if (slot) {
+          totalPrice += slot.price;
+        }
+      }
+    } else {
+      // Fallback to simple pricePerHour
+      totalPrice = field.pricePerHour * (end - start);
+    }
 
     setBookingLoading(true);
     try {
@@ -133,7 +153,7 @@ export default function BookingDetail() {
         date: formatDate(selectedDate),
         startHour: start,
         endHour: end,
-        totalPrice: total,
+        totalPrice: totalPrice,
       });
 
       Alert.alert("Thành công", "Đặt sân thành công!");
@@ -236,28 +256,39 @@ export default function BookingDetail() {
 
       {/* Thời gian */}
       <View style={styles.card}>
-        <Text style={styles.title}>Chọn giờ</Text>
+        <Text style={styles.title}>Chọn thời gian</Text>
 
-        <View style={styles.timeContainer}>
-          <View style={styles.timeGroup}>
-            <Text style={styles.timeLabel}>Từ:</Text>
-            <TimePicker
-              start={start}
-              end={end}
-              onStartChange={setStart}
-              onEndChange={setEnd}
-              isHourBooked={isHourBooked}
-            />
-          </View>
+        <TimePicker
+          start={start}
+          end={end}
+          onStartChange={setStart}
+          onEndChange={setEnd}
+          isHourBooked={isHourBooked}
+        />
 
-          <View style={styles.timeGroup}>
-            <Text style={styles.timeLabel}>Đến:</Text>
-            <Text style={styles.timeValue}>{end}:00</Text>
+        {/* Time Summary */}
+        <View style={styles.timeSummary}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Bắt đầu:</Text>
+            <Text style={styles.summaryValue}>{start}:00</Text>
           </View>
+          <Text style={styles.summaryArrow}>→</Text>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Kết thúc:</Text>
+            <Text style={styles.summaryValue}>{end}:00</Text>
+          </View>
+          <Text style={styles.summaryDuration}>
+            ({end - start}h)
+          </Text>
         </View>
       </View>
 
-      <PriceSummary pricePerHour={field.pricePerHour} start={start} end={end} />
+      <PriceSummary
+        pricePerHour={field.pricePerHour}
+        start={start}
+        end={end}
+        priceSchedule={field.priceSchedule}
+      />
 
       <TouchableOpacity
         style={[styles.button, bookingLoading && styles.buttonDisabled]}
@@ -367,6 +398,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginTop: 8,
+  },
+  timeSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#E8F5E9",
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 14,
+  },
+  summaryItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#27AE60",
+  },
+  summaryArrow: {
+    fontSize: 20,
+    color: "#27AE60",
+    marginHorizontal: 8,
+  },
+  summaryDuration: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#27AE60",
+    position: "absolute",
+    right: 12,
+    top: 8,
   },
   footer: {
     paddingBottom: 20,
