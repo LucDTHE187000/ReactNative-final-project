@@ -8,6 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Image,
+  ScrollView,
+  TextInput,
 } from "react-native";
 import { useEffect, useState } from "react";
 import API from "@/services/api";
@@ -19,18 +22,31 @@ interface Field {
   type: string;
   pricePerHour: number;
   location: string;
+  image?: string;
+  description?: string;
+  capacity?: number;
 }
 
 export default function HomeScreen() {
-  const [fields, setFields] = useState<Field[]>([]);
+  const [allFields, setAllFields] = useState<Field[]>([]);
+  const [filteredFields, setFilteredFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchLocation, setSearchLocation] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
   const { token, logout, user } = useAuth();
 
   const fetchFields = async () => {
     try {
       const response = await API.get("/fields");
-      setFields(response.data);
+      // Filter only football fields (Sân 5, Sân 7, Sân 11)
+      const footballFields = response.data.filter(
+        (field: Field) =>
+          field.type === "Sân 5" || field.type === "Sân 7" || field.type === "Sân 11"
+      );
+      setAllFields(footballFields);
+      setFilteredFields(footballFields);
     } catch (error: any) {
       console.log("Fetch fields error:", error);
       Alert.alert("Lỗi", "Không thể tải danh sách sân");
@@ -40,6 +56,18 @@ export default function HomeScreen() {
     }
   };
 
+  const handleSearch = () => {
+    let filtered = allFields;
+
+    if (searchLocation.trim()) {
+      filtered = filtered.filter((field) =>
+        field.location.toLowerCase().includes(searchLocation.toLowerCase())
+      );
+    }
+
+    setFilteredFields(filtered);
+  };
+
   useEffect(() => {
     if (!token) {
       router.replace("/login");
@@ -47,6 +75,10 @@ export default function HomeScreen() {
     }
     fetchFields();
   }, [token]);
+
+  useEffect(() => {
+    handleSearch();
+  }, [searchLocation, selectedDate, selectedTime]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -68,62 +100,122 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>🏟️ Danh sách sân bóng</Text>
+        <View>
+          <Text style={styles.greeting}>Xin chào, {user?.name || "Bạn"} 👋</Text>
+          <Text style={styles.subtitle}>Tìm sân bóng đá yêu thích</Text>
+        </View>
         <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={() => router.push("/search")}
-          >
-            <Text style={styles.searchButtonText}>🔍 Tìm</Text>
-          </TouchableOpacity>
           {user?.role === "admin" && (
             <TouchableOpacity
               style={styles.adminButton}
               onPress={() => router.push("/admin")}
             >
-              <Text style={styles.adminButtonText}>⚙️ Admin</Text>
+              <Text style={styles.adminButtonText}>⚙️</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutText}>Đăng xuất</Text>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutText}>🚪</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <FlatList
-        data={fields}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Không có sân nào</Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.type}>{item.type}</Text>
-              <Text style={styles.location}>{item.location}</Text>
-              <Text style={styles.price}>{item.pricePerHour.toLocaleString()}đ / giờ</Text>
-            </View>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="📍 Tìm theo địa điểm..."
+          value={searchLocation}
+          onChangeText={setSearchLocation}
+          placeholderTextColor="#999"
+        />
+      </View>
 
+      {/* Results count */}
+      <Text style={styles.resultsText}>
+        Tìm thấy {filteredFields.length} sân bóng
+      </Text>
+
+      {/* Fields List */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#27AE60" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredFields}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          scrollEnabled={true}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>😔 Không tìm thấy sân nào</Text>
+              <Text style={styles.emptySubtext}>Vui lòng thử lại với địa điểm khác</Text>
+            </View>
+          }
+          renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.button}
+              style={styles.card}
               onPress={() => router.push(`/booking/${item._id}`)}
+              activeOpacity={0.9}
             >
-              <Text style={styles.buttonText}>Đặt sân</Text>
+              {/* Field Image */}
+              {item.image ? (
+                <Image
+                  source={{ uri: item.image }}
+                  style={styles.fieldImage}
+                />
+              ) : (
+                <View style={[styles.fieldImage, styles.placeholderImage]}>
+                  <Text style={styles.placeholderText}>⚽</Text>
+                </View>
+              )}
+
+              {/* Field Info */}
+              <View style={styles.cardContent}>
+                <View style={styles.cardHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldName}>{item.name}</Text>
+                    <Text style={styles.fieldType}>
+                      {item.type} • {item.capacity || 7} người
+                    </Text>
+                  </View>
+                  <View style={styles.priceTag}>
+                    <Text style={styles.priceText}>
+                      {(item.pricePerHour / 1000).toFixed(0)}k
+                    </Text>
+                    <Text style={styles.priceSubtext}>/giờ</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.fieldLocation}>📍 {item.location}</Text>
+
+                {item.description && (
+                  <Text
+                    style={styles.fieldDescription}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
+                    {item.description}
+                  </Text>
+                )}
+
+                {/* Book Button */}
+                <TouchableOpacity
+                  style={styles.bookButton}
+                  onPress={() => router.push(`/booking/${item._id}`)}
+                >
+                  <Text style={styles.bookButtonText}>Chọn sân →</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -131,113 +223,197 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
-    padding: 16,
+    backgroundColor: "#F8F9FA",
   },
+
+  // Header
   header: {
+    backgroundColor: "#27AE60",
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    flex: 1,
+  greeting: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#fff",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
   },
   headerButtons: {
     flexDirection: "row",
     gap: 8,
   },
-  searchButton: {
-    backgroundColor: "#1976D2",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  searchButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 11,
-  },
   adminButton: {
-    backgroundColor: "#FF9800",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
   },
   adminButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 11,
+    fontSize: 20,
   },
   logoutButton: {
-    backgroundColor: "#E53935",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
   },
   logoutText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 12,
+    fontSize: 20,
   },
-  card: {
+
+  // Search
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#F8F9FA",
+  },
+  searchInput: {
     backgroundColor: "#fff",
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  type: {
-    fontSize: 13,
-    color: "#666",
-    marginVertical: 2,
-  },
-  location: {
-    fontSize: 12,
-    color: "#999",
-    marginBottom: 4,
-  },
-  price: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     fontSize: 14,
-    color: "#E53935",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    color: "#333",
+  },
+
+  // Results text
+  resultsText: {
+    paddingHorizontal: 16,
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 8,
     fontWeight: "600",
   },
-  button: {
-    backgroundColor: "#1976D2",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+
+  // Card
+  card: {
+    backgroundColor: "#fff",
+    marginHorizontal: 12,
+    marginBottom: 12,
+    borderRadius: 14,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
+  fieldImage: {
+    width: "100%",
+    height: 180,
+    backgroundColor: "#E0E0E0",
+  },
+  placeholderImage: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F0F0F0",
+  },
+  placeholderText: {
+    fontSize: 60,
+  },
+
+  // Card Content
+  cardContent: {
+    padding: 14,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  fieldName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 4,
+  },
+  fieldType: {
     fontSize: 12,
+    color: "#666",
+    fontWeight: "500",
   },
+  priceTag: {
+    backgroundColor: "#27AE60",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignItems: "center",
+    minWidth: 60,
+  },
+  priceText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  priceSubtext: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.8)",
+  },
+
+  fieldLocation: {
+    fontSize: 12,
+    color: "#755C36",
+    marginBottom: 6,
+    fontWeight: "500",
+  },
+  fieldDescription: {
+    fontSize: 12,
+    color: "#888",
+    marginBottom: 10,
+    lineHeight: 16,
+  },
+
+  // Book Button
+  bookButton: {
+    backgroundColor: "#27AE60",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 6,
+  },
+  bookButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+
+  // Empty State
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F4F6F8",
+    backgroundColor: "#F8F9FA",
   },
   emptyContainer: {
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 40,
+    marginTop: 60,
+    paddingHorizontal: 30,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 18,
+    color: "#333",
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 13,
     color: "#999",
   },
 });
