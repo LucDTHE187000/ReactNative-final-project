@@ -1,0 +1,11 @@
+{
+  "booking": { "$oid": "69ac80919cc380f9ba0b3c2b" },
+  "user": { "$oid": "69ac3bb1adca435f95fc6f1d" },
+  "amount": 300000,
+  "payosOrderCode": 87654321,
+  "payosCheckoutUrl": "https://pay.payos.vn/web/def456uvw",
+  "status": "pending",
+  "paidAt": null,
+  "createdAt": { "$date": "2026-03-10T09:00:00.000Z" },
+  "updatedAt": { "$date": "2026-03-10T09:00:00.000Z" }
+}

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Thanh toán QR</title>
+
+    <link rel="stylesheet" href="/css/styles.css" />
+
+    <style>
+      body {
+        font-family: Arial;
+        background: #f5f5f5;
+      }
+
+      .container {
+        width: 420px;
+        margin: 60px auto;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .qr-code img {
+        width: 260px;
+        height: 260px;
+        margin: 15px 0;
+      }
+
+      .info {
+        margin-top: 10px;
+        font-size: 16px;
+      }
+
+      .amount {
+        font-size: 22px;
+        font-weight: bold;
+        color: #e53935;
+      }
+
+      .order {
+        font-weight: bold;
+      }
+
+      .timer {
+        margin-top: 20px;
+        font-size: 18px;
+        color: #ff9800;
+        font-weight: bold;
+      }
+
+      button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        border: none;
+        background: #2196f3;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .confirm-btn {
+        background: #4caf50;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h2>Quét QR để thanh toán</h2>
+
+      <div class="qr-code">
+        <img id="qrImage" />
+      </div>
+
+      <div class="info">Mã đơn: <span class="order" id="orderCode"></span></div>
+
+      <div class="info">
+        Số tiền:
+        <div class="amount" id="amount"></div>
+      </div>
+
+      <div class="timer">
+        Thời gian giữ sân: <span id="countdown">10:00</span>
+      </div>
+
+      <p>Vui lòng chuyển đúng số tiền và nội dung.</p>
+
+      <button class="confirm-btn" onclick="confirmPayment()">
+        Vui Lòng Thanh Toán Và Chờ Xác Nhận
+      </button>
+
+      <br />
+
+      <button onclick="window.location.href = '/payment.html'">Quay lại</button>
+    </div>
+
+    <script>
+      // lấy dữ liệu từ URL
+      const params = new URLSearchParams(window.location.search);
+
+      const amount = params.get("amount");
+      const order = params.get("order");
+
+      // hiển thị thông tin
+      document.getElementById("orderCode").innerText = order;
+
+      document.getElementById("amount").innerText =
+        Number(amount).toLocaleString("vi-VN") + " đ";
+
+      // tạo QR VietQR
+      const bank = "TCB";
+      const account = "19075099469014";
+
+      const qrUrl = `https://img.vietqr.io/image/${bank}-${account}-compact.png?amount=${amount}&addInfo=${order}&t=${Date.now()}`;
+
+      document.getElementById("qrImage").src = qrUrl;
+
+      // countdown 10 phút
+      let time = 600;
+
+      function updateTimer() {
+        let minutes = Math.floor(time / 60);
+        let seconds = time % 60;
+
+        document.getElementById("countdown").innerText =
+          `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+        if (time <= 0) {
+          alert("Hết thời gian thanh toán!");
+          window.location.href = "/payment.html";
+        }
+
+        time--;
+      }
+
+      setInterval(updateTimer, 1000);
+
+      // 🔥 xác nhận thanh toán
+      async function confirmPayment() {
+        try {
+          const bookingData = JSON.parse(sessionStorage.getItem("bookingData"));
+          const token = localStorage.getItem("token");
+
+          if (!bookingData || !bookingData.bookingId) {
+            alert("Không tìm thấy thông tin booking!");
+            return;
+          }
+
+          const res = await fetch(`/api/bookings/${bookingData.bookingId}/confirm`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + token,
+            },
+            body: JSON.stringify({
+              paymentMethod: "qr",
+            }),
+          });
+
+          if (res.ok) {
+            alert("✅ Thanh toán thành công!");
+            window.location.href = "/fields.html";
+          } else {
+            const data = await res.json();
+            alert("❌ " + (data.message || "Lỗi xác nhận thanh toán"));
+          }
+        } catch (err) {
+          alert("❌ Lỗi: " + err.message);
+        }
+      }
+    </script>
+  </body>
+</html>

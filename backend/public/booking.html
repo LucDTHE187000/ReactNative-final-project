@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt sân - LucHTSportBooking</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/booking.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <div class="logo">
+                    <span class="logo-icon">⚽</span>
+                    <span>LucHTSportBooking</span>
+                </div>
+            </div>
+            <div class="navbar-menu">
+                <span class="user-name" id="userName"></span>
+                <button class="btn btn-secondary" onclick="handleLogout()">Đăng xuất</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="booking-container">
+        <div class="booking-header">
+            <a href="/fields.html" class="back-button">← Quay lại</a>
+            <h1 class="booking-title">Đặt Sân: <span id="fieldName"></span></h1>
+        </div>
+
+        <div class="booking-content">
+            <!-- Main Column -->
+            <div class="booking-main">
+                <!-- Price Schedule -->
+                <section class="price-schedule-section">
+                    <div class="section-title">
+                        📊 Giá Sân Theo Khung Giờ
+                    </div>
+                    <div class="price-grid" id="priceSchedule">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div class="price-note">
+                        <span>💡</span>
+                        <span>Giá cao điểm có mức giá cao hơn giá thường</span>
+                    </div>
+                </section>
+
+                <!-- Calendar Selection -->
+                <section class="calendar-section">
+                    <div class="calendar-header">
+                        <div class="section-title" style="margin-bottom: 0;">
+                            📅 Chọn ngày
+                        </div>
+                    </div>
+
+                    <div class="calendar-header">
+                        <div class="calendar-title" id="monthYear"></div>
+                        <div class="calendar-nav">
+                            <button onclick="previousMonth()">←</button>
+                            <button onclick="nextMonth()">→</button>
+                        </div>
+                    </div>
+
+                    <div class="calendar-grid" id="calendarGrid" style="grid-template-columns: repeat(7, 1fr);">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+
+                    <div class="calendar-legend">
+                        <div class="legend-item">
+                            <div class="legend-color available"></div>
+                            <span>Đã chọn</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color booked"></div>
+                            <span>Hôm nay</span>
+                        </div>
+                    </div>
+
+                    <div class="selected-date" id="displayDate">
+                        Chưa chọn ngày
+                    </div>
+                </section>
+
+                <!-- Time Selection -->
+                <section class="time-section">
+                    <div class="section-title">
+                        ⏰ Chọn giờ (1 giờ)
+                    </div>
+
+                    <div class="time-grid" id="timeGrid">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+
+                    <div class="duration-display" id="durationDisplay" style="display: none;">
+                        <p><strong id="selectedTime"></strong></p>
+                        <p>Thời lượng: <strong id="duration"></strong></p>
+                    </div>
+
+                    <div class="time-note">
+                        <span>💡</span>
+                        <span>Giờ cao điểm có mức giá cao hơn giá thường</span>
+                    </div>
+                </section>
+
+                <!-- Add-on Services -->
+                <section class="services-section">
+                    <div class="section-title">
+                        🛍️ Dịch vụ thêm
+                    </div>
+
+                    <div class="service-list">
+                        <label class="service-item">
+                            <input type="checkbox" name="service" value="water" data-price="20000">
+                            <div class="service-checkbox"></div>
+                            <div class="service-info">
+                                <div class="service-name">Nước uống</div>
+                                <div class="service-desc">Nước suối, nước ngọt các loại</div>
+                            </div>
+                            <div class="service-price">20.000 đ</div>
+                        </label>
+
+                        <label class="service-item">
+                            <input type="checkbox" name="service" value="inside" data-price="100000">
+                            <div class="service-checkbox"></div>
+                            <div class="service-info">
+                                <div class="service-name">Trọng tài</div>
+                                <div class="service-desc">Thuê trọng tài chuyên nghiệp</div>
+                            </div>
+                            <div class="service-price">100.000 đ</div>
+                        </label>
+
+                        <label class="service-item">
+                            <input type="checkbox" name="service" value="towel" data-price="10000">
+                            <div class="service-checkbox"></div>
+                            <div class="service-info">
+                                <div class="service-name">Khăn lạnh</div>
+                                <div class="service-desc">Khăn lạnh bảo vệ sức khỏe</div>
+                            </div>
+                            <div class="service-price">10.000 đ</div>
+                        </label>
+
+                        <label class="service-item">
+                            <input type="checkbox" name="service" value="ball" data-price="50000">
+                            <div class="service-checkbox"></div>
+                            <div class="service-info">
+                                <div class="service-name">Bóng đá</div>
+                                <div class="service-desc">Cho thuê bóng đá</div>
+                            </div>
+                            <div class="service-price">50.000 đ</div>
+                        </label>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Summary Sidebar -->
+            <div class="booking-summary">
+                <div class="summary-title">Tóm tắt đặt sân</div>
+
+                <div class="summary-item">
+                    <span>Sân bóng</span>
+                    <strong id="summaryField"></strong>
+                </div>
+
+                <div class="summary-item">
+                    <span>Ngày</span>
+                    <strong id="summaryDate">Chưa chọn</strong>
+                </div>
+
+                <div class="summary-item">
+                    <span>Giờ</span>
+                    <strong id="summaryTime">Chưa chọn</strong>
+                </div>
+
+                <div class="summary-item">
+                    <span>Thời lượng</span>
+                    <strong id="summaryDuration">1 giờ</strong>
+                </div>
+
+                <div class="summary-divider"></div>
+
+                <div class="summary-item">
+                    <span>Giá sân (1 giờ)</span>
+                    <strong id="summaryFieldPrice">0 đ</strong>
+                </div>
+
+                <div id="summaryServices"></div>
+
+                <div class="summary-divider"></div>
+
+                <div class="summary-total">
+                    <span class="label">Tổng tiền</span>
+                    <span class="amount" id="summaryTotal">0 đ</span>
+                </div>
+
+                <button class="btn-checkout" id="checkoutBtn" onclick="goToPayment()" disabled>
+                    Đặt sân và thanh toán →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/booking.js"></script>
+</body>
+</html>

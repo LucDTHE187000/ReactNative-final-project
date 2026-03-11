@@ -28,7 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         case "RESTORE_TOKEN":
           return {
             ...prevState,
-            userToken: action.payload,
+            userToken: action.payload.token,
+            user: action.payload.user,
             isLoading: false,
           };
         case "SIGN_IN":
@@ -65,17 +66,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ✅ Restore token on app start
   useEffect(() => {
     const bootstrapAsync = async () => {
-      let userToken;
+      let userToken = null;
+      let user = null;
       try {
         userToken = await AsyncStorage.getItem("token");
+        const userJson = await AsyncStorage.getItem("user");
+        if (userJson) {
+          user = JSON.parse(userJson);
+        }
         if (userToken) {
-          // Verify token with backend
           API.defaults.headers.common["Authorization"] = `Bearer ${userToken}`;
         }
       } catch (e) {
         console.log("Failed to restore session", e);
       }
-      dispatch({ type: "RESTORE_TOKEN", payload: userToken });
+      dispatch({ type: "RESTORE_TOKEN", payload: { token: userToken, user } });
     };
 
     bootstrapAsync();

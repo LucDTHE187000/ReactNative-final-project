@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const fieldSchema = new mongoose.Schema(
   {
@@ -54,4 +54,4 @@ const fieldSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Field", fieldSchema);
+export default mongoose.model("Field", fieldSchema);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+﻿import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,15 +8,20 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
+  ScrollView,
 } from "react-native";
 import API from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { router, useFocusEffect } from "expo-router";
+import { colors, fonts, spacing, radius, shadows } from "@/constants/theme";
 
 interface Booking {
   _id: string;
   fieldName: string;
+  orderCode?: string;
   field?: {
+    _id: string;
     name: string;
     location: string;
     pricePerHour: number;
@@ -25,7 +30,9 @@ interface Booking {
   startHour: number;
   endHour: number;
   totalPrice: number;
+  services?: { name: string; price: number }[];
   status: "pending" | "confirmed" | "cancelled";
+  paymentStatus: "unpaid" | "paid" | "failed";
   createdAt: string;
 }
 
@@ -34,11 +41,14 @@ export default function BookingsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
-  const { token, logout } = useAuth();
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const { token, logout, user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const fetchBookings = async () => {
     try {
-      const response = await API.get("/bookings/my-bookings");
+      const endpoint = isAdmin ? "/bookings" : "/bookings/my-bookings";
+      const response = await API.get(endpoint);
       setBookings(response.data);
     } catch (error: any) {
       console.log("Fetch bookings error:", error);
@@ -52,7 +62,6 @@ export default function BookingsScreen() {
     }
   };
 
-  // Fetch on screen focus
   useFocusEffect(
     useCallback(() => {
       if (!token) {
@@ -60,7 +69,8 @@ export default function BookingsScreen() {
         return;
       }
       fetchBookings();
-    }, [token])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token, isAdmin])
   );
 
   const handleRefresh = () => {
@@ -68,57 +78,70 @@ export default function BookingsScreen() {
     fetchBookings();
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
+  /**
+   * Author: Lê Trần Trọng Đạt - mssv: HE194235
+   * Param: bookingId - ID booking cần hủy
+   * Description: Gọi API hủy booking, đóng modal, cập nhật lại danh sách
+   */
+  const doCancelBooking = async (bookingId: string) => {
+    setCancelling(bookingId);
+    try {
+      await API.put(`/bookings/${bookingId}/cancel`);
+      setSelectedBooking(null);
+      Alert.alert("Thành công", "Đặt sân đã được hủy");
+      fetchBookings();
+    } catch (error: any) {
+      console.error("Cancel booking error:", error.response?.data ?? error.message);
+      Alert.alert("Lỗi", error.response?.data?.message || "Không thể hủy đặt sân");
+    } finally {
+      setCancelling(null);
+    }
+  };
+
+  const handleCancelBooking = (bookingId: string) => {
     Alert.alert(
       "Xác nhận hủy",
       "Bạn chắc chắn muốn hủy đặt sân này?",
       [
-        { text: "Không", onPress: () => {} },
-        {
-          text: "Có, hủy",
-          onPress: async () => {
-            setCancelling(bookingId);
-            try {
-              await API.put(`/bookings/${bookingId}/cancel`);
-              Alert.alert("Thành công", "Đặt sân đã được hủy");
-              fetchBookings();
-            } catch (error: any) {
-              Alert.alert(
-                "Lỗi",
-                error.response?.data?.message || "Không thể hủy đặt sân"
-              );
-            } finally {
-              setCancelling(null);
-            }
-          },
-        },
+        { text: "Không" },
+        { text: "Có, hủy", onPress: () => { doCancelBooking(bookingId); } },
       ]
     );
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "confirmed":
-        return "#4CAF50";
-      case "pending":
-        return "#FFA726";
-      case "cancelled":
-        return "#EF5350";
-      default:
-        return "#999";
+      case "confirmed": return "#4CAF50";
+      case "pending":   return "#FFA726";
+      case "cancelled": return "#EF5350";
+      default:          return "#999";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "confirmed":
-        return "Đã xác nhận";
-      case "pending":
-        return "Chờ xác nhận";
-      case "cancelled":
-        return "Đã hủy";
-      default:
-        return status;
+      case "confirmed": return "Đã xác nhận";
+      case "pending":   return "Chờ xác nhận";
+      case "cancelled": return "Đã hủy";
+      default:          return status;
+    }
+  };
+
+  const getPaymentStatusText = (ps: string) => {
+    switch (ps) {
+      case "paid":   return "✅ Đã thanh toán";
+      case "unpaid": return "⏳ Chưa thanh toán";
+      case "failed": return "❌ Thất bại";
+      default:       return "";
+    }
+  };
+
+  const getPaymentStatusColor = (ps: string) => {
+    switch (ps) {
+      case "paid":   return "#4CAF50";
+      case "unpaid": return "#FFA726";
+      case "failed": return "#EF5350";
+      default:       return "#999";
     }
   };
 
@@ -130,122 +153,234 @@ export default function BookingsScreen() {
   };
 
   const canCancel = (booking: Booking) => {
-    return booking.status !== "cancelled" && !isPastDate(booking.date);
+    if (booking.status === "cancelled") return false;
+    return isAdmin ? true : !isPastDate(booking.date);
   };
+
+  /**
+   * Author: Lê Trần Trọng Đạt - mssv: HE194235
+   * Param: dateStr - chuỗi ngày ISO hoặc YYYY-MM-DD
+   * Description: Format ngày sang dd/MM/yyyy tránh lỗi timezone
+   */
+  const formatDate = (dateStr: string) => {
+    const parts = dateStr.substring(0, 10).split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  };
+
+  const formatCreatedAt = (iso: string) =>
+    new Date(iso).toLocaleString("vi-VN");
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1976D2" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.title}>📅 Lịch Sử Đặt Sân</Text>
+        <Text style={styles.title}>
+          {isAdmin ? "📋 Tất Cả Đặt Sân" : "📅 Lịch Sử Đặt Sân"}
+        </Text>
         <TouchableOpacity
           style={styles.logoutButton}
-          onPress={async () => {
-            await logout();
-            router.replace("/login");
-          }}
+          onPress={async () => { await logout(); router.replace("/login"); }}
         >
           <Text style={styles.logoutText}>Đăng xuất</Text>
         </TouchableOpacity>
       </View>
 
+      {/* ── Booking list ── */}
       <FlatList
         data={bookings}
         keyExtractor={(item) => item._id}
         contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Chưa có đặt sân nào</Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
-              onPress={() => router.push("/(tabs)")}
-            >
-              <Text style={styles.emptyButtonText}>Đi đặt sân</Text>
-            </TouchableOpacity>
+            {!isAdmin && (
+              <TouchableOpacity style={styles.emptyButton} onPress={() => router.push("/(tabs)")}>
+                <Text style={styles.emptyButtonText}>Đi đặt sân</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
-            {/* Header */}
+            {/* Card header */}
             <View style={styles.cardHeader}>
-              <View style={styles.cardTitle}>
-                <Text style={styles.singleName} numberOfLines={1}>
-                  {item.field?.name || item.fieldName}
-                </Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: getStatusColor(item.status) },
-                  ]}
-                >
-                  <Text style={styles.statusText}>
-                    {getStatusText(item.status)}
-                  </Text>
+              <Text style={styles.singleName} numberOfLines={1}>
+                {item.field?.name || item.fieldName}
+              </Text>
+              <View style={styles.badgeRow}>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+                  <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
                 </View>
+                {item.paymentStatus && (
+                  <View style={[styles.statusBadge, { backgroundColor: getPaymentStatusColor(item.paymentStatus) }]}>
+                    <Text style={styles.statusText}>{getPaymentStatusText(item.paymentStatus)}</Text>
+                  </View>
+                )}
               </View>
             </View>
 
-            {/* Details */}
+            {/* Card body */}
             <View style={styles.details}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>📍 Địa điểm:</Text>
-                <Text style={styles.detailValue} numberOfLines={1}>
-                  {item.field?.location || "N/A"}
-                </Text>
+                <Text style={styles.detailValue} numberOfLines={1}>{item.field?.location || "N/A"}</Text>
               </View>
-
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>📅 Ngày:</Text>
-                <Text style={styles.detailValue}>
-                  {new Date(item.date).toLocaleDateString("vi-VN")}
-                </Text>
+                <Text style={styles.detailValue}>{formatDate(item.date)}</Text>
               </View>
-
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>⏰ Giờ:</Text>
-                <Text style={styles.detailValue}>
-                  {item.startHour}:00 - {item.endHour}:00
-                </Text>
+                <Text style={styles.detailValue}>{item.startHour}:00 - {item.endHour}:00</Text>
               </View>
-
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>💰 Giá:</Text>
-                <Text style={styles.priceValue}>
-                  {item.totalPrice.toLocaleString()}đ
-                </Text>
+                <Text style={styles.priceValue}>{item.totalPrice.toLocaleString()}đ</Text>
               </View>
             </View>
 
-            {/* Actions */}
-            {canCancel(item) && (
-              <TouchableOpacity
-                style={[
-                  styles.cancelButton,
-                  cancelling === item._id && styles.cancelButtonDisabled,
-                ]}
-                onPress={() => handleCancelBooking(item._id)}
-                disabled={cancelling === item._id}
-              >
-                {cancelling === item._id ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.cancelText}>Hủy đặt sân</Text>
-                )}
-              </TouchableOpacity>
-            )}
+            {/* Action button */}
+            <TouchableOpacity
+              style={styles.detailButton}
+              onPress={() => setSelectedBooking(item)}
+            >
+              <Text style={styles.detailButtonText}>🔍 Xem chi tiết</Text>
+            </TouchableOpacity>
           </View>
         )}
       />
+
+      {/* ── Detail Modal ── */}
+      <Modal
+        visible={selectedBooking !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedBooking(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Modal header */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Chi Tiết Đặt Sân</Text>
+                <TouchableOpacity onPress={() => setSelectedBooking(null)}>
+                  <Text style={styles.modalClose}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {selectedBooking && (
+                <>
+                  {/* Field name + badges */}
+                  <Text style={styles.modalFieldName}>
+                    {selectedBooking.field?.name || selectedBooking.fieldName}
+                  </Text>
+                  <View style={styles.badgeRow}>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedBooking.status) }]}>
+                      <Text style={styles.statusText}>{getStatusText(selectedBooking.status)}</Text>
+                    </View>
+                    {selectedBooking.paymentStatus && (
+                      <View style={[styles.statusBadge, { backgroundColor: getPaymentStatusColor(selectedBooking.paymentStatus) }]}>
+                        <Text style={styles.statusText}>{getPaymentStatusText(selectedBooking.paymentStatus)}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Info rows */}
+                  <View style={styles.modalInfoCard}>
+                    {[
+                      { label: "Mã đơn",    value: selectedBooking.orderCode || selectedBooking._id },
+                      { label: "Địa điểm",  value: selectedBooking.field?.location || "N/A" },
+                      { label: "Ngày",      value: formatDate(selectedBooking.date) },
+                      { label: "Giờ",       value: `${selectedBooking.startHour}:00 - ${selectedBooking.endHour}:00` },
+                      { label: "Số giờ",    value: `${selectedBooking.endHour - selectedBooking.startHour} giờ` },
+                      { label: "Tổng tiền", value: `${selectedBooking.totalPrice.toLocaleString()}đ`, highlight: true },
+                      { label: "Ngày tạo",  value: formatCreatedAt(selectedBooking.createdAt) },
+                    ].map((row) => (
+                      <View key={row.label} style={styles.modalRow}>
+                        <Text style={styles.modalLabel}>{row.label}</Text>
+                        <Text style={[styles.modalValue, row.highlight && { color: colors.primary }]}>
+                          {row.value}
+                        </Text>
+                      </View>
+                    ))}
+
+                    {/* Services */}
+                    {selectedBooking.services && selectedBooking.services.length > 0 && (
+                      <View style={styles.modalRow}>
+                        <Text style={styles.modalLabel}>Dịch vụ</Text>
+                        <Text style={styles.modalValue}>
+                          {selectedBooking.services.map((s) => s.name).join(", ")}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* User actions (non-admin only) */}
+                  {!isAdmin && (
+                    <View style={styles.modalActions}>
+                      {/* Cập nhật */}
+                      {selectedBooking.status !== "cancelled" && !isPastDate(selectedBooking.date) && (
+                        <TouchableOpacity
+                          style={styles.updateButton}
+                          onPress={() => {
+                            setSelectedBooking(null);
+                            router.push({
+                              pathname: "/booking/[id]",
+                              params: { id: selectedBooking.field?._id || "" },
+                            });
+                          }}
+                        >
+                          <Text style={styles.updateButtonText}>✏️ Cập nhật</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Xóa đơn */}
+                      {canCancel(selectedBooking) && (
+                        <TouchableOpacity
+                          style={[styles.cancelButton, cancelling === selectedBooking._id && styles.cancelButtonDisabled]}
+                          disabled={cancelling === selectedBooking._id}
+                          onPress={() => handleCancelBooking(selectedBooking._id)}
+                        >
+                          {cancelling === selectedBooking._id
+                            ? <ActivityIndicator color="#fff" size="small" />
+                            : <Text style={styles.cancelText}>🗑️ Xóa đơn</Text>
+                          }
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Admin actions */}
+                  {isAdmin && canCancel(selectedBooking) && (
+                    <View style={styles.modalActions}>
+                      <TouchableOpacity
+                        style={[styles.cancelButton, cancelling === selectedBooking._id && styles.cancelButtonDisabled]}
+                        disabled={cancelling === selectedBooking._id}
+                        onPress={() => handleCancelBooking(selectedBooking._id)}
+                      >
+                        {cancelling === selectedBooking._id
+                          ? <ActivityIndicator color="#fff" size="small" />
+                          : <Text style={styles.cancelText}>🗑️ Hủy đơn này</Text>
+                        }
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -253,137 +388,231 @@ export default function BookingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    backgroundColor: colors.darkBg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F4F6F8",
+    backgroundColor: colors.darkBg,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: fonts.sizes["2xl"],
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
     flex: 1,
   },
   logoutButton: {
-    backgroundColor: "#E53935",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: colors.error,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
   },
   logoutText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 12,
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.xs,
   },
+  // ── Card ──
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 3,
+    backgroundColor: colors.cardBg,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.lg,
     borderLeftWidth: 4,
-    borderLeftColor: "#1976D2",
+    borderLeftColor: colors.primary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.lg,
   },
   cardHeader: {
-    marginBottom: 12,
-  },
-  cardTitle: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    marginBottom: spacing.lg,
   },
   singleName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    flex: 1,
-    color: "#333",
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginLeft: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
   },
   statusText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "600",
+    color: colors.textPrimary,
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.bold,
   },
   details: {
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-    paddingTop: 12,
+    borderTopColor: colors.border,
+    paddingTop: spacing.lg,
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: spacing.md,
     alignItems: "center",
   },
   detailLabel: {
-    fontSize: 13,
-    color: "#666",
-    fontWeight: "500",
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    fontWeight: fonts.weights.semibold,
     flex: 1,
   },
   detailValue: {
-    fontSize: 13,
-    color: "#333",
-    fontWeight: "600",
+    fontSize: fonts.sizes.xs,
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
     flex: 1,
     textAlign: "right",
   },
   priceValue: {
-    fontSize: 14,
-    color: "#E53935",
-    fontWeight: "bold",
+    fontSize: fonts.sizes.sm,
+    color: colors.primary,
+    fontWeight: fonts.weights.bold,
     flex: 1,
     textAlign: "right",
   },
-  cancelButton: {
-    backgroundColor: "#EF5350",
-    paddingVertical: 10,
-    borderRadius: 8,
+  detailButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
     alignItems: "center",
-    marginTop: 12,
+    marginTop: spacing.lg,
+  },
+  detailButtonText: {
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.xs,
+  },
+  // ── Empty ──
+  emptyContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: spacing["5xl"],
+  },
+  emptyText: {
+    fontSize: fonts.sizes.base,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
+    textAlign: "center",
+  },
+  emptyButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing["2xl"],
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+  },
+  emptyButtonText: {
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+  },
+  // ── Modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  modalContainer: {
+    backgroundColor: colors.cardBg,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing["5xl"],
+    maxHeight: "90%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.xl,
+  },
+  modalTitle: {
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.extrabold,
+    color: colors.textPrimary,
+  },
+  modalClose: {
+    fontSize: fonts.sizes.xl,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.md,
+  },
+  modalFieldName: {
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  modalInfoCard: {
+    backgroundColor: colors.lightBg,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl,
+  },
+  modalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalLabel: {
+    fontSize: fonts.sizes.sm,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  modalValue: {
+    fontSize: fonts.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+    flex: 1.5,
+    textAlign: "right",
+  },
+  modalActions: {
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  updateButton: {
+    backgroundColor: colors.secondary,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    alignItems: "center",
+  },
+  updateButtonText: {
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.sm,
+  },
+  cancelButton: {
+    backgroundColor: colors.error,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    alignItems: "center",
   },
   cancelButtonDisabled: {
     opacity: 0.6,
   },
   cancelText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  emptyContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#999",
-    marginBottom: 16,
-  },
-  emptyButton: {
-    backgroundColor: "#1976D2",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  emptyButtonText: {
-    color: "#fff",
-    fontWeight: "600",
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.sm,
   },
 });

@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import * as fieldController from "../controllers/fieldController.js";
+import { protect, admin } from "../middleware/authMiddleware.js";
+
 const router = express.Router();
-const fieldController = require("../controllers/fieldController");
-const { protect, admin } = require("../middleware/authMiddleware");
 
 // 📌 Public routes
 router.get("/", fieldController.getAllFields);
@@ -13,4 +14,4 @@ router.post("/", protect, admin, fieldController.createField);
 router.put("/:id", protect, admin, fieldController.updateField);
 router.delete("/:id", protect, admin, fieldController.deleteField);
 
-module.exports = router;
+export default router;

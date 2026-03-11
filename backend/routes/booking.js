@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import * as bookingController from "../controllers/bookingController.js";
+import { protect, admin } from "../middleware/authMiddleware.js";
+
 const router = express.Router();
-const bookingController = require("../controllers/bookingController");
-const { protect, admin } = require("../middleware/authMiddleware");
 
 // 📌 Create booking (user must be logged in)
 router.post("/", protect, bookingController.createBooking);
@@ -12,6 +13,9 @@ router.get("/my-bookings", protect, bookingController.getUserBookings);
 // 📌 Get bookings by date (public)
 router.get("/by-date", bookingController.getBookingsByDate);
 
+// 📌 Get single booking by ID (owner or admin)
+router.get("/:id", protect, bookingController.getBookingById);
+
 // 📌 Cancel booking (user)
 router.put("/:id/cancel", protect, bookingController.cancelBooking);
 
@@ -21,4 +25,7 @@ router.get("/", protect, admin, bookingController.getAllBookings);
 // 📌 Update booking status (admin only)
 router.put("/:id/status", protect, admin, bookingController.updateBookingStatus);
 
-module.exports = router;
+// 📌 Confirm payment
+router.put("/:id/confirm", protect, bookingController.confirmPayment);
+
+export default router;

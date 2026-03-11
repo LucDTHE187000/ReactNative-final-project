@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ActivityIndicator, View } from 'react-native';
+import { colors } from '@/constants/theme';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -16,8 +17,8 @@ function RootLayoutContent() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F4F6F8' }}>
-        <ActivityIndicator size="large" color="#1976D2" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.darkBg }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -29,7 +30,10 @@ function RootLayoutContent() {
           <>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            <Stack.Screen name="booking" options={{ headerShown: true, title: 'Booking' }} />
+            <Stack.Screen name="booking" options={{ headerShown: true, title: 'Đặt Sân' }} />
+            <Stack.Screen name="payment" options={{ headerShown: true, title: 'Thanh Toán' }} />
+            <Stack.Screen name="admin" options={{ headerShown: true, title: 'Quản Lý Sân' }} />
+            <Stack.Screen name="admin-analytics" options={{ headerShown: true, title: 'Thống Kê' }} />
           </>
         ) : (
           <>
@@ -38,7 +42,7 @@ function RootLayoutContent() {
           </>
         )}
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }
