@@ -122,6 +122,11 @@ export default function ProfileScreen() {
               <Text style={styles.adminBadgeText}>⚙️ Admin</Text>
             </View>
           )}
+          {user?.role === "fieldOwner" && (
+            <View style={styles.fieldOwnerBadge}>
+              <Text style={styles.fieldOwnerBadgeText}>🏆 Chủ Sân</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -195,6 +200,20 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
+        {user?.role === "fieldOwner" && (
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => router.push("/field-owner")}
+          >
+            <Text style={styles.actionIcon}>🏆</Text>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Quản Lý Sân Của Tôi</Text>
+              <Text style={styles.actionDesc}>Sửa, xóa, thêm sân</Text>
+            </View>
+            <Text style={styles.actionArrow}>›</Text>
+          </TouchableOpacity>
+        )}
+
         {user?.role === "admin" && (
           <TouchableOpacity
             style={styles.actionItem}
@@ -217,7 +236,7 @@ export default function ProfileScreen() {
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>Vai Trò</Text>
           <Text style={styles.settingValue}>
-            {user?.role === "admin" ? "Admin" : "Người Dùng"}
+            {user?.role === "admin" ? "Admin" : user?.role === "fieldOwner" ? "Chủ Sân" : "Người Dùng"}
           </Text>
         </View>
 
@@ -301,6 +320,18 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   adminBadgeText: {
+    color: colors.textPrimary,
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.bold,
+  },
+  fieldOwnerBadge: {
+    backgroundColor: colors.success,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    alignSelf: "flex-start",
+  },
+  fieldOwnerBadgeText: {
     color: colors.textPrimary,
     fontSize: fonts.sizes.xs,
     fontWeight: fonts.weights.bold,

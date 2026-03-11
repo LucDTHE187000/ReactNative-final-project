@@ -12,7 +12,7 @@ export const unstable_settings = {
 };
 
 function RootLayoutContent() {
-  const { isLoading, token } = useAuth();
+  const { isLoading, token, user } = useAuth();
   const colorScheme = useColorScheme();
 
   if (isLoading) {
@@ -32,8 +32,15 @@ function RootLayoutContent() {
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             <Stack.Screen name="booking" options={{ headerShown: true, title: 'Đặt Sân' }} />
             <Stack.Screen name="payment" options={{ headerShown: true, title: 'Thanh Toán' }} />
-            <Stack.Screen name="admin" options={{ headerShown: true, title: 'Quản Lý Sân' }} />
-            <Stack.Screen name="admin-analytics" options={{ headerShown: true, title: 'Thống Kê' }} />
+            {user?.role === 'fieldOwner' && (
+              <Stack.Screen name="field-owner" options={{ headerShown: false, title: 'Sân Của Tôi' }} />
+            )}
+            {user?.role === 'admin' && (
+              <>
+                <Stack.Screen name="admin" options={{ headerShown: false, title: 'Quản Lý Sân' }} />
+                <Stack.Screen name="admin-analytics" options={{ headerShown: true, title: 'Thống Kê' }} />
+              </>
+            )}
           </>
         ) : (
           <>

@@ -22,9 +22,10 @@ export default function RegisterScreen() {
   const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [selectedRole, setSelectedRole] = useState<"user" | "fieldOwner" | null>(null);
   const { register } = useAuth();
 
-  const handleRegister = async () => {
+  const handleRegister = async (role: "user" | "fieldOwner") => {
     if (!name || !email || !password || !confirmPassword) {
       setErrorMsg("Vui lòng điền tất cả các trường");
       return;
@@ -48,7 +49,7 @@ export default function RegisterScreen() {
     setErrorMsg("");
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, email, password, role);
       router.replace("/login");
     } catch (error: any) {
       setErrorMsg(error || "Đăng ký thất bại");
@@ -154,18 +155,92 @@ export default function RegisterScreen() {
               </View>
             ) : null}
 
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-              onPress={handleRegister}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.textPrimary} />
-              ) : (
-                <Text style={styles.submitButtonText}>Đăng Ký</Text>
+            {/* Role Selection */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Bạn muốn đăng ký là?</Text>
+              <Text style={styles.roleHint}>Chọn một trong hai lựa chọn bên dưới</Text>
+              <View style={styles.roleButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.roleButton,
+                    selectedRole === "user" && styles.roleButtonActive,
+                  ]}
+                  onPress={() => setSelectedRole("user")}
+                  disabled={loading}
+                >
+                  <Text style={styles.roleIcon}>👤</Text>
+                  <Text
+                    style={[
+                      styles.roleButtonText,
+                      selectedRole === "user" && styles.roleButtonTextActive,
+                    ]}
+                  >
+                    Người Dùng
+                  </Text>
+                  <Text style={styles.roleDesc}>Đặt sân bóng</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.roleButton,
+                    selectedRole === "fieldOwner" && styles.roleButtonActive,
+                  ]}
+                  onPress={() => setSelectedRole("fieldOwner")}
+                  disabled={loading}
+                >
+                  <Text style={styles.roleIcon}>🏆</Text>
+                  <Text
+                    style={[
+                      styles.roleButtonText,
+                      selectedRole === "fieldOwner" && styles.roleButtonTextActive,
+                    ]}
+                  >
+                    Chủ Sân
+                  </Text>
+                  <Text style={styles.roleDesc}>Quản lý sân</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Submit Buttons */}
+            <View style={styles.submitButtonsContainer}>
+              {selectedRole === "user" && (
+                <TouchableOpacity
+                  style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                  onPress={() => handleRegister("user")}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={colors.textPrimary} />
+                  ) : (
+                    <Text style={styles.submitButtonText}>Đăng Ký Người Dùng</Text>
+                  )}
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+
+              {selectedRole === "fieldOwner" && (
+                <TouchableOpacity
+                  style={[styles.submitButton, styles.submitButtonFieldOwner, loading && styles.submitButtonDisabled]}
+                  onPress={() => handleRegister("fieldOwner")}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={colors.textPrimary} />
+                  ) : (
+                    <Text style={styles.submitButtonText}>Đăng Ký Chủ Sân</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+
+              {!selectedRole && (
+                <TouchableOpacity
+                  style={[styles.submitButton, styles.submitButtonDisabled]}
+                  disabled
+                >
+                  <Text style={styles.submitButtonText}>Vui lòng chọn vai trò</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Footer Links */}
@@ -310,6 +385,53 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.bold,
+  },
+  submitButtonFieldOwner: {
+    backgroundColor: colors.success,
+  },
+  submitButtonsContainer: {
+    marginTop: spacing.xl,
+  },
+  roleHint: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  roleButtons: {
+    flexDirection: "row",
+    gap: spacing.lg,
+  },
+  roleButton: {
+    flex: 1,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.cardOverlay,
+  },
+  roleButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}15`,
+  },
+  roleIcon: {
+    fontSize: fonts.sizes["3xl"],
+    marginBottom: spacing.sm,
+  },
+  roleButtonText: {
+    fontSize: fonts.sizes.sm,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  roleButtonTextActive: {
+    color: colors.primary,
+  },
+  roleDesc: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
   },
   footer: {
     marginTop: spacing["3xl"],

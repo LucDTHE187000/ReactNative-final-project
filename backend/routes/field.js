@@ -1,6 +1,7 @@
 import express from "express";
 import * as fieldController from "../controllers/fieldController.js";
-import { protect, admin } from "../middleware/authMiddleware.js";
+import { protect, admin, fieldOwner } from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -9,9 +10,9 @@ router.get("/", fieldController.getAllFields);
 router.get("/search", fieldController.searchFields);
 router.get("/:id", fieldController.getFieldById);
 
-// 📌 Admin only routes
-router.post("/", protect, admin, fieldController.createField);
-router.put("/:id", protect, admin, fieldController.updateField);
+// 📌 Field Owner & Admin routes
+router.post("/", protect, fieldOwner, upload.single("image"), fieldController.createField);
+router.put("/:id", protect, fieldOwner, upload.single("image"), fieldController.updateField);
 router.delete("/:id", protect, admin, fieldController.deleteField);
 
 export default router;

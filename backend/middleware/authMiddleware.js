@@ -35,3 +35,20 @@ export const admin = (req, res, next) => {
   }
 };
 
+export const fieldOwner = (req, res, next) => {
+  if (req.user && (req.user.role === "fieldOwner" || req.user.role === "admin")) {
+    next();
+  } else {
+    res.status(403).json({ message: "Field owner access required" });
+  }
+};
+
+export const requireRole = (roles) => {
+  return (req, res, next) => {
+    if (req.user && roles.includes(req.user.role)) {
+      next();
+    } else {
+      res.status(403).json({ message: `Access denied. Required role: ${roles.join(" or ")}` });
+    }
+  };
+};

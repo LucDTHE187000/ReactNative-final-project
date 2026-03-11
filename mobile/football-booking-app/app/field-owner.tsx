@@ -24,9 +24,10 @@ interface Field {
   type: string;
   pricePerHour: number;
   isActive: boolean;
+  owner: string;
 }
 
-export default function AdminPanel() {
+export default function FieldOwnerPanel() {
   const [fields, setFields] = useState<Field[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,8 +47,11 @@ export default function AdminPanel() {
 
   const fetchFields = async () => {
     try {
+      // Get all fields, then filter by owner
       const response = await API.get("/fields");
-      setFields(response.data);
+      const allFields = response.data;
+      const ownerFields = allFields.filter((field: Field) => field.owner === user?.id);
+      setFields(ownerFields);
     } catch (error: any) {
       console.log("Fetch fields error:", error);
       Alert.alert("Lỗi", "Không thể tải danh sách sân");
@@ -59,7 +63,7 @@ export default function AdminPanel() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!token || (user?.role !== "admin")) {
+      if (!token || (user?.role !== "fieldOwner" && user?.role !== "admin")) {
         Alert.alert("Lỗi", "Bạn không có quyền truy cập");
         router.replace("/(tabs)");
         return;
@@ -176,8 +180,8 @@ export default function AdminPanel() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>⚙️ Quản Lý Sân Bóng</Text>
-          <Text style={styles.subtitle}>Admin Panel</Text>
+          <Text style={styles.title}>🏆 Sân Của Tôi</Text>
+          <Text style={styles.subtitle}>Quản lý sân bóng của bạn</Text>
         </View>
         <TouchableOpacity
           style={styles.logoutButton}
@@ -186,7 +190,6 @@ export default function AdminPanel() {
             setIsLoggingOut(true);
             try {
               await logout();
-              // Navigation sẽ được handle bởi AuthContext
               router.replace("/login");
             } catch (error: any) {
               console.error("Logout error:", error);
@@ -210,41 +213,58 @@ export default function AdminPanel() {
       </TouchableOpacity>
 
       {/* Fields List */}
-      <FlatList
-        data={fields}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <Text style={styles.fieldName}>{item.name}</Text>
-              <Text style={styles.fieldInfo}>📍 {item.location}</Text>
-              <Text style={styles.fieldInfo}>🏅 {item.type}</Text>
-              <Text style={styles.priceInfo}>
-                💰 {item.pricePerHour.toLocaleString()}đ / giờ
-              </Text>
-            </View>
+      {fields.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Bạn chưa có sân bóng nào</Text>
+          <TouchableOpacity
+            style={styles.emptyButton}
+            onPress={() => openModal()}
+          >
+            <Text style={styles.emptyButtonText}>Tạo sân đầu tiên</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={fields}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <View style={styles.cardContent}>
+                <Text style={styles.fieldName}>{item.name}</Text>
+                <Text style={styles.fieldInfo}>📍 {item.location}</Text>
+                <Text style={styles.fieldInfo}>🏅 {item.type}</Text>
+                <Text style={styles.priceInfo}>
+                  💰 {item.pricePerHour.toLocaleString()}đ / giờ
+                </Text>
+                <View style={styles.statusContainer}>
+                  <Text style={styles.statusText}>
+                    {item.isActive ? "✅ Đang hoạt động" : "⛔ Tạm dừng"}
+                  </Text>
+                </View>
+              </View>
 
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={() => openModal(item)}
-              >
-                <Text style={styles.editText}>Sửa</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDelete(item._id)}
-              >
-                <Text style={styles.deleteText}>Xóa</Text>
-              </TouchableOpacity>
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => openModal(item)}
+                >
+                  <Text style={styles.editText}>Sửa</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDelete(item._id)}
+                >
+                  <Text style={styles.deleteText}>Xóa</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
 
       {/* Modal */}
       <Modal
@@ -274,6 +294,7 @@ export default function AdminPanel() {
                   setFormData({ ...formData, name: text })
                 }
                 editable={!submitting}
+                placeholderTextColor={colors.textSecondary}
               />
 
               <Text style={styles.label}>Địa Chỉ:</Text>
@@ -285,6 +306,7 @@ export default function AdminPanel() {
                   setFormData({ ...formData, location: text })
                 }
                 editable={!submitting}
+                placeholderTextColor={colors.textSecondary}
               />
 
               <Text style={styles.label}>Loại Sân:</Text>
@@ -320,6 +342,7 @@ export default function AdminPanel() {
                 }
                 keyboardType="numeric"
                 editable={!submitting}
+                placeholderTextColor={colors.textSecondary}
               />
             </ScrollView>
 
@@ -363,6 +386,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.darkBg,
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+  },
+  emptyText: {
+    fontSize: fonts.sizes.lg,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  emptyButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+  },
+  emptyButtonText: {
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.md,
+  },
   header: {
     backgroundColor: colors.cardBg,
     paddingHorizontal: spacing.lg,
@@ -399,96 +444,102 @@ const styles = StyleSheet.create({
   addButton: {
     backgroundColor: colors.success,
     marginHorizontal: spacing.lg,
-    marginVertical: spacing.lg,
-    paddingVertical: spacing.lg,
-    borderRadius: radius.md,
+    marginVertical: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
     alignItems: "center",
+    ...shadows.md,
   },
   addButtonText: {
     color: colors.textPrimary,
     fontWeight: fonts.weights.bold,
-    fontSize: fonts.sizes.base,
+    fontSize: fonts.sizes.md,
   },
   card: {
     backgroundColor: colors.cardBg,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     borderRadius: radius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    ...shadows.lg,
+    ...shadows.md,
   },
   cardContent: {
-    flex: 1,
-  },
-  fieldName: {
-    fontSize: fonts.sizes.base,
-    fontWeight: fonts.weights.bold,
-    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
-  fieldInfo: {
-    fontSize: fonts.sizes.xs,
-    color: colors.textSecondary,
+  fieldName: {
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
-  priceInfo: {
+  fieldInfo: {
     fontSize: fonts.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  priceInfo: {
+    fontSize: fonts.sizes.md,
+    fontWeight: fonts.weights.semibold,
     color: colors.primary,
-    fontWeight: fonts.weights.bold,
+    marginTop: spacing.sm,
+  },
+  statusContainer: {
     marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.darkBg,
+    borderRadius: radius.md,
+  },
+  statusText: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    fontWeight: fonts.weights.semibold,
   },
   actions: {
     flexDirection: "row",
     gap: spacing.md,
   },
   editButton: {
-    backgroundColor: colors.secondary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    flex: 1,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
+    alignItems: "center",
   },
   editText: {
     color: colors.textPrimary,
     fontWeight: fonts.weights.bold,
-    fontSize: fonts.sizes.xs,
   },
   deleteButton: {
+    flex: 1,
     backgroundColor: colors.error,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
+    alignItems: "center",
   },
   deleteText: {
     color: colors.textPrimary,
     fontWeight: fonts.weights.bold,
-    fontSize: fonts.sizes.xs,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: colors.cardBg,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
+    paddingTop: spacing.lg,
     maxHeight: "90%",
-    paddingBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -499,78 +550,78 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   closeButton: {
-    fontSize: fonts.sizes["2xl"],
+    fontSize: fonts.sizes.xl,
     color: colors.textSecondary,
   },
   form: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingVertical: spacing.md,
   },
   label: {
-    fontSize: fonts.sizes.sm,
+    fontSize: fonts.sizes.md,
     fontWeight: fonts.weights.semibold,
     color: colors.textPrimary,
-    marginBottom: spacing.md,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
   },
   input: {
+    backgroundColor: colors.darkBg,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: fonts.sizes.base,
-    backgroundColor: colors.cardOverlay,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   typeButtons: {
     flexDirection: "row",
     gap: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   typeButton: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
-    paddingVertical: spacing.lg,
+    borderWidth: 2,
+    borderColor: colors.border,
     alignItems: "center",
   },
   typeButtonActive: {
-    backgroundColor: colors.secondary,
-    borderColor: colors.secondary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   typeButtonText: {
-    fontSize: fonts.sizes.sm,
-    fontWeight: fonts.weights.bold,
     color: colors.textSecondary,
+    fontWeight: fonts.weights.semibold,
   },
   typeButtonTextActive: {
     color: colors.textPrimary,
   },
   modalActions: {
     flexDirection: "row",
-    gap: spacing.lg,
+    gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   cancelButton: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: colors.border,
     alignItems: "center",
   },
   cancelButtonText: {
-    fontWeight: fonts.weights.semibold,
-    color: colors.textSecondary,
-    fontSize: fonts.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
   },
   submitButton: {
     flex: 1,
-    backgroundColor: colors.secondary,
-    paddingVertical: spacing.lg,
+    backgroundColor: colors.success,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
     alignItems: "center",
   },
@@ -578,8 +629,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    fontWeight: fonts.weights.bold,
     color: colors.textPrimary,
-    fontSize: fonts.sizes.sm,
+    fontWeight: fonts.weights.bold,
   },
 });

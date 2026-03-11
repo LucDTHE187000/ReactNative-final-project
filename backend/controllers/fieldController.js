@@ -23,13 +23,20 @@ export const getFieldById = async (req, res) => {
   }
 };
 
-// 📌 Create field (admin only)
+// 📌 Create field (fieldOwner & admin)
 export const createField = async (req, res) => {
   try {
-    const { name, location, description, type, pricePerHour, capacity, image } = req.body;
+    const { name, location, description, type, pricePerHour, capacity } = req.body;
 
     if (!name || !location || !type || !pricePerHour) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Get image from file upload if exists
+    let imageUrl = null;
+    if (req.file) {
+      // Path should be relative: /uploads/images/filename
+      imageUrl = `/uploads/images/${req.file.filename}`;
     }
 
     const field = new Field({
@@ -39,7 +46,7 @@ export const createField = async (req, res) => {
       type,
       pricePerHour,
       capacity: capacity || 1,
-      image,
+      image: imageUrl,
       owner: req.user._id,
     });
 
@@ -50,10 +57,10 @@ export const createField = async (req, res) => {
   }
 };
 
-// 📌 Update field (admin only)
+// 📌 Update field (fieldOwner & admin)
 export const updateField = async (req, res) => {
   try {
-    const { name, location, description, type, pricePerHour, capacity, image, isActive } = req.body;
+    const { name, location, description, type, pricePerHour, capacity, isActive } = req.body;
 
     const field = await Field.findById(req.params.id);
     if (!field) {
@@ -71,7 +78,12 @@ export const updateField = async (req, res) => {
     field.type = type || field.type;
     field.pricePerHour = pricePerHour || field.pricePerHour;
     field.capacity = capacity || field.capacity;
-    field.image = image || field.image;
+    
+    // Update image if new file is uploaded
+    if (req.file) {
+      field.image = `/uploads/images/${req.file.filename}`;
+    }
+    
     if (isActive !== undefined) field.isActive = isActive;
 
     const updated = await field.save();
@@ -89,11 +101,7 @@ export const deleteField = async (req, res) => {
       return res.status(404).json({ message: "Field not found" });
     }
 
-    // Check if user is owner
-    if (field.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to delete this field" });
-    }
-
+    // Admin can delete any field (owner check removed)
     await Field.findByIdAndDelete(req.params.id);
     res.json({ message: "Field deleted" });
   } catch (error) {

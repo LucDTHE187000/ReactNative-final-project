@@ -8,13 +8,17 @@ const router = express.Router();
 // ================= REGISTER =================
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     // Kiểm tra email tồn tại
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
     }
+
+    // Validate role - chỉ cho phép "user" hoặc "fieldOwner"
+    const validRoles = ["user", "fieldOwner"];
+    const userRole = role && validRoles.includes(role) ? role : "user";
 
     // Tạo salt và hash password
     const salt = await bcrypt.genSalt(10);
@@ -25,11 +29,12 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      role: userRole,
     });
 
     await newUser.save();
 
-    res.status(201).json({ message: "✅ Register success" });
+    res.status(201).json({ message: "✅ Register success", role: userRole });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -5,9 +5,13 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const isFieldOwner = user?.role === 'fieldOwner';
 
   return (
     <Tabs
@@ -25,7 +29,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Sân Bóng',
+          title: isAdmin ? 'Danh Sách Sân' : isFieldOwner ? 'Sân Của Tôi' : 'Khám Phá',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />

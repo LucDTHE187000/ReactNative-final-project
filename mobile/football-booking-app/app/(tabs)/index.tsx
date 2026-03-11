@@ -9,6 +9,7 @@ import {
   TextInput,
   RefreshControl,
   Image,
+  Alert,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useEffect, useState } from "react";
@@ -83,8 +84,13 @@ export default function HomeScreen() {
   };
 
   const handleLogout = async () => {
-    await logout();
-    router.replace("/login");
+    try {
+      await logout();
+      router.replace("/login");
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      Alert.alert("Lỗi", "Đăng xuất thất bại");
+    }
   };
 
   if (loading) {
@@ -202,10 +208,10 @@ export default function HomeScreen() {
               style={styles.picker}
               dropdownIconColor={colors.textSecondary}
             >
-              <Picker.Item label="Tất cả" value="" color={colors.textPrimary} />
-              <Picker.Item label="Sân 5" value="Sân 5" color={colors.textPrimary} />
-              <Picker.Item label="Sân 7" value="Sân 7" color={colors.textPrimary} />
-              <Picker.Item label="Sân 11" value="Sân 11" color={colors.textPrimary} />
+              <Picker.Item label="Tất cả" value="" color="#ed1919" />
+              <Picker.Item label="Sân 5" value="Sân 5" color="#0adb3b" />
+              <Picker.Item label="Sân 7" value="Sân 7" color="#5ec0e3" />
+              <Picker.Item label="Sân 11" value="Sân 11" color="#cadf0c" />
             </Picker>
           </View>
         </View>
@@ -493,17 +499,20 @@ const styles = StyleSheet.create({
     fontSize: fonts.sizes.base,
   },
   pickerWrapper: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.cardOverlay,
-    overflow: "hidden",
-    minWidth: 110,
-  },
-  picker: {
-    color: colors.textPrimary,
-    height: 48,
-  },
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: radius.md,
+  backgroundColor: colors.cardBg,
+  overflow: "hidden",
+  minWidth: 120,
+  justifyContent: "center",
+},
+
+picker: {
+  color: colors.textPrimary,
+  height: 48,
+  backgroundColor: colors.cardBg,
+},
   searchContainer: {
     marginBottom: spacing.xl,
   },
