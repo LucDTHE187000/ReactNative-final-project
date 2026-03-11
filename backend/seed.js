@@ -1,9 +1,10 @@
-const mongoose = require("mongoose");
-require("dotenv").config();
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import Field from "./models/Field.js";
+import User from "./models/User.js";
+import bcrypt from "bcryptjs";
 
-const Field = require("./models/Field");
-const User = require("./models/User");
-const bcrypt = require("bcryptjs");
+dotenv.config();
 
 const seedData = async () => {
   try {
@@ -172,6 +173,18 @@ const seedData = async () => {
         priceSchedule: createPriceSchedule(340000, 430000, 490000),
         capacity: 10,
         image: `${serverUrl}/images/field10.jpg`,
+        owner: adminUser._id,
+        isActive: true,
+      },
+      {
+        name: "Sân Hưng Phương",
+        location: "Yên Mô, Ninh Bình",
+        description: "Sân bóng 7 người, tích hợp quán cafe",
+        type: "Sân 7",
+        pricePerHour: 200000,
+        priceSchedule: createPriceSchedule(150000, 200000, 250000),
+        capacity: 14,
+        image: `${serverUrl}/images/field11.jpg`,
         owner: adminUser._id,
         isActive: true,
       },

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng Nhập - LucHTSportBooking</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <span class="auth-logo">⚽</span>
+                <h1>LucHTSportBooking</h1>
+            </div>
+
+            <h2 class="auth-title">Đăng Nhập</h2>
+            <p class="auth-subtitle">Truy cập tài khoản của bạn</p>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="Nhập email..." 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Mật khẩu</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Nhập mật khẩu..." 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="remember">
+                        Ghi nhớ đăng nhập
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large" style="width: 100%; margin-top: 20px;">
+                    Đăng Nhập
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Chưa có tài khoản? <a href="/register.html">Đăng ký ngay</a></p>
+                <p><a href="/">← Quay lại trang chủ</a></p>
+            </div>
+
+            <div id="errorMsg" class="error-message"></div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+</body>
+</html>

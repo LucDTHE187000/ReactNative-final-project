@@ -1,9 +1,17 @@
-const Booking = require("../models/Booking");
+import Booking from "../models/Booking.js";
 
 // 📌 Create booking (user must be logged in)
-exports.createBooking = async (req, res) => {
+export const createBooking = async (req, res) => {
   try {
-    let { fieldName, field, date, startHour, endHour, totalPrice } = req.body;
+    let {
+      fieldName,
+      field,
+      date,
+      startHour,
+      endHour,
+      totalPrice,
+      services, // 🔥 nhận services từ frontend
+    } = req.body;
 
     const start = Number(startHour);
     const end = Number(endHour);
@@ -14,7 +22,7 @@ exports.createBooking = async (req, res) => {
 
     // Check if time slot already booked
     const conflict = await Booking.findOne({
-      fieldName: fieldName.trim(),
+      field: field,
       date,
       startHour: { $lt: end },
       endHour: { $gt: start },
@@ -27,6 +35,9 @@ exports.createBooking = async (req, res) => {
       });
     }
 
+    // 🔥 tạo mã đơn thanh toán
+    const orderCode = "BOOKING" + Date.now();
+
     const booking = new Booking({
       user: req.user._id,
       fieldName: fieldName.trim(),
@@ -35,11 +46,17 @@ exports.createBooking = async (req, res) => {
       startHour: start,
       endHour: end,
       totalPrice: Number(totalPrice),
-      status: "confirmed",
+      services: services || [], // 🔥 lưu services
+      orderCode,
+      status: "pending",
     });
 
     const saved = await booking.save();
-    res.status(201).json(saved);
+
+    res.status(201).json({
+      booking: saved.toObject(),
+      orderCode: orderCode,
+    });
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: err.message });
@@ -47,12 +64,11 @@ exports.createBooking = async (req, res) => {
 };
 
 // 📌 Get user's bookings
-exports.getUserBookings = async (req, res) => {
+export const getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user._id }).populate(
-      "field",
-      "name location type pricePerHour"
-    );
+    const bookings = await Booking.find({
+      user: req.user._id,
+    }).populate("field", "name location type pricePerHour");
 
     res.json(bookings);
   } catch (error) {
@@ -61,7 +77,7 @@ exports.getUserBookings = async (req, res) => {
 };
 
 // 📌 Get all bookings (admin only)
-exports.getAllBookings = async (req, res) => {
+export const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
       .populate("user", "name email")
@@ -74,13 +90,13 @@ exports.getAllBookings = async (req, res) => {
 };
 
 // 📌 Get bookings by date and field
-exports.getBookingsByDate = async (req, res) => {
+export const getBookingsByDate = async (req, res) => {
   try {
-    const { date, fieldName } = req.query;
+    const { date, field } = req.query;
 
     const bookings = await Booking.find({
       date,
-      fieldName,
+      ...(field && { field }),
       status: { $ne: "cancelled" },
     });
 
@@ -90,8 +106,28 @@ exports.getBookingsByDate = async (req, res) => {
   }
 };
 
+// 📌 Get single booking by ID
+export const getBookingById = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    // Chỉ cho phép owner hoặc admin
+    if (
+      booking.user.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+    res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // 📌 Cancel booking
-exports.cancelBooking = async (req, res) => {
+export const cancelBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
 
@@ -99,22 +135,29 @@ exports.cancelBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Check if user owns this booking
-    if (booking.user.toString() !== req.user._id.toString()) {
+    // Check if user owns this booking hoặc là admin
+    if (
+      booking.user.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
     booking.status = "cancelled";
+
     await booking.save();
 
-    res.json({ message: "Booking cancelled", booking });
+    res.json({
+      message: "✅ Booking cancelled",
+      booking,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 // 📌 Update booking status (admin only)
-exports.updateBookingStatus = async (req, res) => {
+export const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
@@ -129,6 +172,34 @@ exports.updateBookingStatus = async (req, res) => {
     );
 
     res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 📌 Confirm payment
+export const confirmPayment = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    if (booking.status !== "pending") {
+      return res.status(400).json({ message: "Booking already processed" });
+    }
+
+    booking.status = "confirmed";
+    booking.paymentStatus = "paid";
+    booking.paidAt = new Date();
+
+    await booking.save();
+
+    res.json({
+      message: "✅ Payment confirmed",
+      booking,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

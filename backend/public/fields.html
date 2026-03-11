@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách sân - LucHTSportBooking</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/fields.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <div class="logo">
+                    <span class="logo-icon">⚽</span>
+                    <span>LucHTSportBooking</span>
+                </div>
+            </div>
+            <div class="navbar-menu">
+                <span class="user-name" id="userName"></span>
+                <button class="btn btn-secondary" onclick="handleLogout()">Đăng xuất</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header with Filters -->
+    <section class="fields-header">
+        <div class="container">
+            <h1>Tìm Kiếm Sân Bóng</h1>
+            <div class="filter-bar">
+                <div class="search-group">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="🔍 Tìm sân hoặc địa điểm..." 
+                        onkeyup="filterFields()"
+                    >
+                </div>
+                <div class="filter-group">
+                    <select id="typeFilter" onchange="filterFields()">
+                        <option value="">Tất cả loại sân</option>
+                        <option value="Sân 5">Sân 5</option>
+                        <option value="Sân 7">Sân 7</option>
+                        <option value="Sân 11">Sân 11</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Fields Grid -->
+    <section class="fields-container">
+        <div class="container">
+            <div class="fields-grid" id="fieldsGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+            <div id="noResults" class="no-results" style="display: none;">
+                <p>Không tìm thấy sân nào phù hợp</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 LucHTSportBooking. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/fields.js"></script>
+</body>
+</html>

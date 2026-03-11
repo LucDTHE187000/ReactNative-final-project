@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LucHTSportBooking - Đặt Sân Bóng Theo Thời Gian Thực</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <div class="logo">
+                    <span class="logo-icon">⚽</span>
+                    <span>LucHTSportBooking</span>
+                </div>
+            </div>
+            <div class="navbar-menu">
+                <a href="#features" class="nav-link">Tính Năng</a>
+                <a href="#stats" class="nav-link">Thống Kê</a>
+                <button class="btn btn-secondary" onclick="goLogin()">Đăng Nhập</button>
+                <button class="btn btn-primary" onclick="goRegister()">Đăng Ký</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                Đặt Sân Bóng <span class="highlight">Theo Thời Gian Thực</span>
+            </h1>
+            <p class="hero-subtitle">Nhanh - Tiện Lợi - Giá Hợp Lý - Thanh Toán Online</p>
+            <div class="hero-buttons">
+                <button class="btn btn-large btn-primary" onclick="goLogin()">
+                    🔍 Tìm sân ngay
+                </button>
+                <button class="btn btn-large btn-secondary" onclick="goFieldsByType()">
+                    📅 Xem lịch đặt
+                </button>
+            </div>
+        </div>
+        <div class="hero-background"></div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="stats-section" id="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">⚽</div>
+                    <div class="stat-number">10+</div>
+                    <div class="stat-label">Sân bóng</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-number">10K+</div>
+                    <div class="stat-label">Khách hàng</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-number">5K+</div>
+                    <div class="stat-label">Bài đánh giá</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="container">
+            <h2>Tại Sao Chọn Chúng Tôi</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⏱️</div>
+                    <h3>Đặt sân nhanh chóng</h3>
+                    <p>Chỉ cần vài click để đặt sân trong vòng 24/7</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📍</div>
+                    <h3>Nhiều địa điểm</h3>
+                    <p>Hơn 50 sân bóng tại các quận trung tâm TP HCM</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💳</div>
+                    <h3>Thanh toán online</h3>
+                    <p>Thanh toán VNPAY an toàn, nhanh chóng, tiện lợi</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Available Fields by Type -->
+    <section class="fields-section">
+        <div class="container">
+            <h2>Danh mục sân theo loại</h2>
+            <div class="field-types" id="fieldTypes">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Sẵn sàng đặt sân?</h2>
+            <p>Tham gia hàng nghìn người dùng hạnh phúc!</p>
+            <button class="btn btn-large btn-primary" onclick="goLogin()">
+                Bắt đầu ngay
+            </button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 SportBooking. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

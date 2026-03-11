@@ -1,8 +1,9 @@
-const express = require("express");
+import express from "express";
+import User from "../models/User.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
 const router = express.Router();
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 
 // ================= REGISTER =================
 router.post("/register", async (req, res) => {
@@ -28,7 +29,7 @@ router.post("/register", async (req, res) => {
 
     await newUser.save();
 
-    res.status(201).json({ message: "Register success" });
+    res.status(201).json({ message: "✅ Register success" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -60,7 +61,7 @@ router.post("/login", async (req, res) => {
     );
 
     res.json({
-      message: "Login success",
+      message: "✅ Login success",
       token,
       user: {
         id: user._id,
@@ -74,4 +75,4 @@ router.post("/login", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

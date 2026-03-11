@@ -52,6 +52,10 @@ const images = [
     name: "field10.jpg",
     url: "https://images.unsplash.com/photo-1511379938547-c1f69b13d835?w=500&h=300&fit=crop",
   },
+  {
+    name: "field11.jpg",
+    url: "https://images.unsplash.com/photo-1511379938547-c1f69b13d835?w=500&h=300&fit=crop",
+  }
 ];
 
 // Hàm tải ảnh

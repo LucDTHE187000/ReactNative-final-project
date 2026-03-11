@@ -1,7 +1,7 @@
-const Field = require("../models/Field");
+import Field from "../models/Field.js";
 
 // 📌 Get all fields (public)
-exports.getAllFields = async (req, res) => {
+export const getAllFields = async (req, res) => {
   try {
     const fields = await Field.find({ isActive: true }).select("-owner");
     res.json(fields);
@@ -11,7 +11,7 @@ exports.getAllFields = async (req, res) => {
 };
 
 // 📌 Get single field
-exports.getFieldById = async (req, res) => {
+export const getFieldById = async (req, res) => {
   try {
     const field = await Field.findById(req.params.id);
     if (!field) {
@@ -24,7 +24,7 @@ exports.getFieldById = async (req, res) => {
 };
 
 // 📌 Create field (admin only)
-exports.createField = async (req, res) => {
+export const createField = async (req, res) => {
   try {
     const { name, location, description, type, pricePerHour, capacity, image } = req.body;
 
@@ -51,7 +51,7 @@ exports.createField = async (req, res) => {
 };
 
 // 📌 Update field (admin only)
-exports.updateField = async (req, res) => {
+export const updateField = async (req, res) => {
   try {
     const { name, location, description, type, pricePerHour, capacity, image, isActive } = req.body;
 
@@ -82,7 +82,7 @@ exports.updateField = async (req, res) => {
 };
 
 // 📌 Delete field (admin only)
-exports.deleteField = async (req, res) => {
+export const deleteField = async (req, res) => {
   try {
     const field = await Field.findById(req.params.id);
     if (!field) {
@@ -102,7 +102,7 @@ exports.deleteField = async (req, res) => {
 };
 
 // 📌 Search fields by location or type
-exports.searchFields = async (req, res) => {
+export const searchFields = async (req, res) => {
   try {
     const { location, type } = req.query;
     let query = { isActive: true };

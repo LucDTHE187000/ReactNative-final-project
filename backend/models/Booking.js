@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema(
   {
@@ -28,17 +28,51 @@ const bookingSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    services: [
+      {
+        name: String,
+        price: Number,
+      },
+    ],
     totalPrice: {
       type: Number,
       required: true,
     },
+    // Mã đơn hiển thị cho user (ví dụ: BOOKING1773062509827)
+    orderCode: {
+      type: String,
+      required: true,
+    },
+    // Booking status
     status: {
       type: String,
       enum: ["pending", "confirmed", "cancelled"],
-      default: "confirmed",
+      default: "pending",
+    },
+    // Trạng thái thanh toán
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "failed"],
+      default: "unpaid",
+    },
+    // Phương thức thanh toán
+    paymentMethod: {
+      type: String,
+      enum: ["qr", "atm", "international", "cash", null],
+      default: null,
+    },
+    // Mã đơn số nguyên gửi cho PayOS (dùng để tra cứu webhook)
+    payosOrderCode: {
+      type: Number,
+      default: null,
+    },
+    // Thời điểm thanh toán thành công
+    paidAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Booking", bookingSchema);
+export default mongoose.model("Booking", bookingSchema);

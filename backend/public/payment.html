@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thanh toán - LucHTSportBooking</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet" href="/css/payment.css" />
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="navbar">
+      <div class="container">
+        <div class="navbar-brand">
+          <div class="logo">
+            <span class="logo-icon">⚽</span>
+            <span>LucHTSportBooking</span>
+          </div>
+        </div>
+        <div class="navbar-menu">
+          <span class="user-name" id="userName"></span>
+          <button class="btn btn-secondary" onclick="handleLogout()">
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="payment-container">
+      <div class="payment-card">
+        <div class="payment-icon">💳</div>
+        <div class="payment-status">Thanh Toán</div>
+        <div class="order-code">
+          <div class="order-code-label">Mã đơn hàng</div>
+          <div class="order-code-value" id="orderCode"></div>
+        </div>
+
+        <div class="booking-details">
+          <div class="detail-row">
+            <span class="detail-label">Sân bóng</span>
+            <span class="detail-value" id="detailField"></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Ngày</span>
+            <span class="detail-value" id="detailDate"></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Giờ</span>
+            <span class="detail-value" id="detailTime"></span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Thời lượng</span>
+            <span class="detail-value" id="detailDuration"></span>
+          </div>
+        </div>
+
+        <div class="price-breakdown">
+          <div class="breakdown-item">
+            <span class="breakdown-label">Giá sân (1 giờ)</span>
+            <span class="breakdown-price" id="breakdownFieldPrice"></span>
+          </div>
+          <div id="breakdownServices"></div>
+          <div class="breakdown-divider"></div>
+          <div class="breakdown-total">
+            <span class="label">Tổng tiền</span>
+            <span class="amount" id="breakdownTotal"></span>
+          </div>
+        </div>
+
+        <div class="payment-methods">
+          <div class="payment-methods-title">Chọn phương thức thanh toán</div>
+          <div class="method-options">
+            <label class="method-option">
+              <input type="radio" name="method" value="qr" checked />
+              <div class="method-radio"></div>
+              <span class="method-label">QR Code</span>
+            </label>
+            <label class="method-option">
+              <input type="radio" name="method" value="atm" />
+              <div class="method-radio"></div>
+              <span class="method-label">Thẻ ATM nội địa</span>
+            </label>
+            <label class="method-option">
+              <input type="radio" name="method" value="international" />
+              <div class="method-radio"></div>
+              <span class="method-label">Thẻ quốc tế (Visa/MasterCard)</span>
+            </label>
+          </div>
+          <div
+            style="
+              margin-top: 15px;
+              font-size: 12px;
+              color: var(--text-secondary);
+            "
+          >
+            Để VNPAY hiển thị tất cả phương thức thanh toán, không chọn bank
+            code cụ thể.
+          </div>
+        </div>
+
+        <div class="payment-buttons">
+          <button class="btn-pay" onclick="handlePay()">
+            Thanh toán VietQR
+          </button>
+
+          <button class="btn-pay" onclick="confirmPayment()">
+            Tôi đã thanh toán
+          </button>
+
+          <button class="btn-back" onclick="goBack()">Quay lại</button>
+        </div>
+
+        <div class="success-message" id="successMsg">
+          <strong>Đặt sân thành công! Vui lòng thanh toán.</strong>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+          "
+        >
+          <div>
+            <div
+              style="
+                font-weight: bold;
+                color: var(--primary-color);
+                font-size: 18px;
+              "
+            >
+              LucHTSportBooking
+            </div>
+            <div
+              style="
+                font-size: 13px;
+                color: var(--text-secondary);
+                margin-top: 8px;
+              "
+            >
+              Đặt sân bóng theo thời gian thực - Nhanh chóng, Tiện Lợi, Giá Hợp
+              Lý
+            </div>
+          </div>
+          <div>
+            <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px">
+              Liên kết nhanh
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary)">
+              Trang chủ<br />Danh sách sân<br />Lịch sử đặt sân
+            </div>
+          </div>
+          <div>
+            <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px">
+              Liên hệ
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary)">
+              0366188654<br />lucdthe187000@fpt.edu.vn
+            </div>
+          </div>
+          <div>
+            <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px">
+              Theo dõi chúng tôi
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary)">
+              <span style="margin-right: 8px">📱YouTube</span>
+              <span style="margin-right: 8px">📷Instagram</span>
+              <span style="margin-right: 8px">🐦Facebook</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/js/payment.js"></script>
+  </body>
+</html>
