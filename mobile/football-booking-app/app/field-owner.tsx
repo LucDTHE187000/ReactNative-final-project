@@ -12,6 +12,7 @@ import {
   ScrollView,
   RefreshControl,
   Image,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
@@ -150,11 +151,17 @@ export default function FieldOwnerPanel() {
       formDataToSend.append("pricePerHour", formData.pricePerHour);
 
       if (selectedImage) {
-        formDataToSend.append("image", {
-          uri: selectedImage.uri,
-          type: selectedImage.type || "image/jpeg",
-          name: selectedImage.name || "image.jpg",
-        } as any);
+        if (Platform.OS === "web") {
+          const imgResponse = await fetch(selectedImage.uri);
+          const blob = await imgResponse.blob();
+          formDataToSend.append("image", blob, selectedImage.name || "image.jpg");
+        } else {
+          formDataToSend.append("image", {
+            uri: selectedImage.uri,
+            type: selectedImage.type || "image/jpeg",
+            name: selectedImage.name || "image.jpg",
+          } as any);
+        }
       }
 
       const endpoint = editingField ? `/api/fields/${editingField._id}` : "/api/fields";
@@ -190,27 +197,37 @@ export default function FieldOwnerPanel() {
   };
 
   const performDelete = (fieldId: string) => {
+    console.log("🗑️ FieldOwner deleting field:", fieldId);
     API.delete(`/fields/${fieldId}`)
       .then(() => {
+        console.log("✅ Delete success");
         Alert.alert("Thành công", "Sân bóng đã được xóa");
         fetchFields();
       })
       .catch((error: any) => {
-        console.error("Delete error:", error);
+        console.error("❌ Delete error status:", error.response?.status);
+        console.error("❌ Delete error data:", JSON.stringify(error.response?.data));
         const errorMsg = error.response?.data?.message || error.message || "Không thể xóa";
         Alert.alert("Lỗi", errorMsg);
       });
   };
 
   const handleDelete = (fieldId: string) => {
+    if (Platform.OS === "web") {
+      if (window.confirm("Bạn chắc chắn muốn xóa sân này?")) {
+        performDelete(fieldId);
+      }
+      return;
+    }
     Alert.alert(
       "Xác nhận xóa",
       "Bạn chắc chắn muốn xóa sân này?",
       [
-        { text: "Hủy", onPress: () => {} },
+        { text: "Hủy", style: "cancel" },
         {
           text: "Xóa",
-          onPress: () => performDelete(fieldId),
+          style: "destructive",
+          onPress: () => { performDelete(fieldId); },
         },
       ]
     );

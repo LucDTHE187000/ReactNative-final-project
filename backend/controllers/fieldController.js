@@ -96,19 +96,24 @@ export const updateField = async (req, res) => {
 // 📌 Delete field (fieldOwner xóa sân của mình, admin xóa bất kỳ)
 export const deleteField = async (req, res) => {
   try {
+    console.log("🗑️ DELETE field request:", req.params.id, "by user:", req.user?._id, "role:", req.user?.role);
     const field = await Field.findById(req.params.id);
     if (!field) {
+      console.log("🗑️ Field not found:", req.params.id);
       return res.status(404).json({ message: "Field not found" });
     }
 
     // fieldOwner chỉ xóa sân của chính mình, admin xóa bất kỳ
     if (req.user.role !== "admin" && field.owner.toString() !== req.user._id.toString()) {
+      console.log("🗑️ Not authorized. Field owner:", field.owner, "User:", req.user._id);
       return res.status(403).json({ message: "Bạn không có quyền xóa sân này" });
     }
 
     await Field.findByIdAndDelete(req.params.id);
+    console.log("🗑️ Field deleted successfully:", req.params.id);
     res.json({ message: "Field deleted" });
   } catch (error) {
+    console.error("🗑️ Delete error:", error.message);
     res.status(500).json({ message: error.message });
   }
 };
