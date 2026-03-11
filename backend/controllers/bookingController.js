@@ -177,6 +177,21 @@ export const updateBookingStatus = async (req, res) => {
   }
 };
 
+// 📌 Delete booking (admin/fieldOwner xóa hẳn booking)
+export const deleteBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    await Booking.findByIdAndDelete(req.params.id);
+    res.json({ message: "Booking deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // 📌 Confirm payment
 export const confirmPayment = async (req, res) => {
   try {

@@ -11,8 +11,11 @@ import {
   TextInput,
   ScrollView,
   RefreshControl,
+  Image,
 } from "react-native";
-import API from "@/services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
+import API, { getImageUrl } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { router, useFocusEffect } from "expo-router";
 import { colors, fonts, spacing, radius, shadows } from "@/constants/theme";
@@ -42,6 +45,11 @@ export default function FieldOwnerPanel() {
     type: "Sân 5",
     pricePerHour: "0",
   });
+  const [selectedImage, setSelectedImage] = useState<{
+    uri: string;
+    name: string;
+    type: string;
+  } | null>(null);
 
   const { token, logout, user } = useAuth();
 
@@ -95,12 +103,36 @@ export default function FieldOwnerPanel() {
         pricePerHour: "0",
       });
     }
+    setSelectedImage(null);
     setModalVisible(true);
   };
 
   const closeModal = () => {
     setModalVisible(false);
     setEditingField(null);
+    setSelectedImage(null);
+  };
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        setSelectedImage({
+          uri: asset.uri,
+          name: asset.fileName || "image.jpg",
+          type: asset.type === "image" ? "image/jpeg" : "image/png",
+        });
+      }
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể chọn ảnh");
+    }
   };
 
   const handleSubmit = async () => {
@@ -111,30 +143,47 @@ export default function FieldOwnerPanel() {
 
     setSubmitting(true);
     try {
-      const data = {
-        name: formData.name,
-        location: formData.location,
-        type: formData.type,
-        pricePerHour: Number.parseInt(formData.pricePerHour),
-      };
+      const formDataToSend = new FormData();
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("location", formData.location);
+      formDataToSend.append("type", formData.type);
+      formDataToSend.append("pricePerHour", formData.pricePerHour);
 
-      if (editingField) {
-        // Update
-        await API.put(`/fields/${editingField._id}`, data);
-        Alert.alert("Thành công", "Sân bóng đã được cập nhật");
-      } else {
-        // Create
-        await API.post("/fields", data);
-        Alert.alert("Thành công", "Sân bóng mới đã được tạo");
+      if (selectedImage) {
+        formDataToSend.append("image", {
+          uri: selectedImage.uri,
+          type: selectedImage.type || "image/jpeg",
+          name: selectedImage.name || "image.jpg",
+        } as any);
       }
 
+      const endpoint = editingField ? `/api/fields/${editingField._id}` : "/api/fields";
+      const method = editingField ? "PUT" : "POST";
+
+      const tokenStr = await AsyncStorage.getItem("token");
+      const serverURL = (API.defaults.baseURL || "http://localhost:5000/api").replace("/api", "");
+
+      const response = await fetch(`${serverURL}${endpoint}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${tokenStr}`,
+        },
+        body: formDataToSend as any,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      Alert.alert(
+        "Thành công",
+        editingField ? "Sân bóng đã được cập nhật" : "Sân bóng mới đã được tạo"
+      );
       closeModal();
       fetchFields();
     } catch (error: any) {
-      Alert.alert(
-        "Lỗi",
-        error.response?.data?.message || "Có lỗi xảy ra"
-      );
+      Alert.alert("Lỗi", error.message || "Có lỗi xảy ra");
     } finally {
       setSubmitting(false);
     }
@@ -233,6 +282,12 @@ export default function FieldOwnerPanel() {
           }
           renderItem={({ item }) => (
             <View style={styles.card}>
+              {item.image && (
+                <Image
+                  source={{ uri: getImageUrl(item.image) || undefined }}
+                  style={styles.cardImage}
+                />
+              )}
               <View style={styles.cardContent}>
                 <Text style={styles.fieldName}>{item.name}</Text>
                 <Text style={styles.fieldInfo}>📍 {item.location}</Text>
@@ -344,6 +399,29 @@ export default function FieldOwnerPanel() {
                 editable={!submitting}
                 placeholderTextColor={colors.textSecondary}
               />
+
+              <Text style={styles.label}>Ảnh Sân:</Text>
+              {selectedImage && (
+                <View style={styles.imagePreviewContainer}>
+                  <Image
+                    source={{ uri: selectedImage.uri }}
+                    style={styles.imagePreview}
+                  />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={() => setSelectedImage(null)}
+                  >
+                    <Text style={styles.removeImageText}>✕ Xóa ảnh</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.imagePicker}
+                onPress={pickImage}
+                disabled={submitting}
+              >
+                <Text style={styles.imagePickerText}>📷 Chọn ảnh</Text>
+              </TouchableOpacity>
             </ScrollView>
 
             <View style={styles.modalActions}>
@@ -464,6 +542,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     ...shadows.md,
+  },
+  cardImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.darkBg,
   },
   cardContent: {
     marginBottom: spacing.md,
@@ -597,6 +682,39 @@ const styles = StyleSheet.create({
   },
   typeButtonTextActive: {
     color: colors.textPrimary,
+  },
+  imagePreviewContainer: {
+    marginBottom: spacing.md,
+    borderRadius: radius.md,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    backgroundColor: colors.darkBg,
+  },
+  removeImageButton: {
+    backgroundColor: colors.error,
+    padding: spacing.sm,
+    alignItems: "center",
+  },
+  removeImageText: {
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.xs,
+  },
+  imagePicker: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  imagePickerText: {
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
   },
   modalActions: {
     flexDirection: "row",

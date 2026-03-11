@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useEffect, useState } from "react";
-import API from "@/services/api";
+import API, { getImageUrl } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { colors, fonts, spacing, radius, shadows } from "@/constants/theme";
 
@@ -228,7 +228,7 @@ export default function HomeScreen() {
               {/* Field Image */}
               {field.image ? (
                 <Image
-                  source={{ uri: field.image }}
+                  source={{ uri: getImageUrl(field.image) || undefined }}
                   style={styles.fieldImage}
                 />
               ) : (

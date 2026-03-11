@@ -8,9 +8,11 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
+import { Svg, Circle, Path } from "react-native-svg";
 import { router } from "expo-router";
 import API from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { colors, fonts, spacing, radius, shadows } from "@/constants/theme";
 
 interface Booking {
   _id: string;
@@ -54,21 +56,11 @@ export default function AdminAnalyticsScreen() {
       const allBookings = response.data;
       setBookings(allBookings);
 
-      // Calculate statistics
       const total = allBookings.length;
-      const confirmed = allBookings.filter(
-        (b: Booking) => b.status === "confirmed"
-      ).length;
-      const pending = allBookings.filter(
-        (b: Booking) => b.status === "pending"
-      ).length;
-      const cancelled = allBookings.filter(
-        (b: Booking) => b.status === "cancelled"
-      ).length;
-      const revenue = allBookings.reduce(
-        (sum: number, b: Booking) => sum + (b.totalPrice || 0),
-        0
-      );
+      const confirmed = allBookings.filter((b: Booking) => b.status === "confirmed").length;
+      const pending = allBookings.filter((b: Booking) => b.status === "pending").length;
+      const cancelled = allBookings.filter((b: Booking) => b.status === "cancelled").length;
+      const revenue = allBookings.reduce((sum: number, b: Booking) => sum + (b.totalPrice || 0), 0);
       const avgPrice = total > 0 ? revenue / total : 0;
 
       setStats({
@@ -87,34 +79,36 @@ export default function AdminAnalyticsScreen() {
     }
   };
 
-  // Calculate booking status distribution
   const bookingStatusData = [
     {
       label: "Xác nhận",
       value: stats.confirmedBookings,
       color: "#4CAF50",
-      percentage: (
-        (stats.confirmedBookings / stats.totalBookings) *
-        100
-      ).toFixed(1),
+      percentage:
+        stats.totalBookings > 0
+          ? ((stats.confirmedBookings / stats.totalBookings) * 100).toFixed(1)
+          : "0",
     },
     {
       label: "Chờ xác nhận",
       value: stats.pendingBookings,
       color: "#FFC107",
       percentage:
-        ((stats.pendingBookings / stats.totalBookings) * 100).toFixed(1),
+        stats.totalBookings > 0
+          ? ((stats.pendingBookings / stats.totalBookings) * 100).toFixed(1)
+          : "0",
     },
     {
       label: "Hủy",
       value: stats.cancelledBookings,
       color: "#F44336",
       percentage:
-        ((stats.cancelledBookings / stats.totalBookings) * 100).toFixed(1),
+        stats.totalBookings > 0
+          ? ((stats.cancelledBookings / stats.totalBookings) * 100).toFixed(1)
+          : "0",
     },
   ];
 
-  // Get top fields by bookings
   const fieldBookings: { [key: string]: number } = {};
   bookings.forEach((booking) => {
     const fieldName = booking.fieldName || "Unknown";
@@ -122,158 +116,180 @@ export default function AdminAnalyticsScreen() {
   });
 
   const topFields = Object.entries(fieldBookings)
-    .map(([field, count]) => ({
-      field,
-      count,
-    }))
+    .map(([field, count]) => ({ field, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
+
+  const maxFieldBookings = topFields.length > 0 ? Math.max(...topFields.map((f) => f.count)) : 1;
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1976D2" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📊 Analytics Dashboard</Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <View>
+          <Text style={styles.headerTitle}>📊 Analytics</Text>
+          <Text style={styles.headerSubtitle}>Thống kê hoạt động</Text>
+        </View>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>← Quay lại</Text>
         </TouchableOpacity>
       </View>
 
       {/* Key Metrics */}
       <View style={styles.metricsContainer}>
-        <MetricCard
-          label="Tổng đơn đặt"
-          value={stats.totalBookings.toString()}
-          icon="📅"
-          color="#1976D2"
-        />
-        <MetricCard
-          label="Doanh thu"
-          value={stats.totalRevenue.toLocaleString() + "đ"}
-          icon="💰"
-          color="#4CAF50"
-        />
-        <MetricCard
-          label="TB mỗi đơn"
-          value={stats.avgPricePerBooking.toLocaleString().split(".")[0] + "đ"}
-          icon="📈"
-          color="#FF9800"
-        />
-        <MetricCard
-          label="Xác nhận"
-          value={stats.confirmedBookings.toString()}
-          icon="✓"
-          color="#4CAF50"
-        />
+        <MetricCard label="Tổng đơn" value={stats.totalBookings.toString()} icon="📅" color="#1976D2" />
+        <MetricCard label="Doanh Thu" value={`${(stats.totalRevenue / 1000000).toFixed(1)}M`} icon="💰" color="#4CAF50" />
+        <MetricCard label="TB/Đơn" value={`${(stats.avgPricePerBooking / 1000).toFixed(0)}K`} icon="📈" color="#FF9800" />
+        <MetricCard label="Xác Nhận" value={stats.confirmedBookings.toString()} icon="✓" color="#4CAF50" />
       </View>
 
-      {/* Booking Status Distribution */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Phân bố trạng thái</Text>
-        {bookingStatusData.map((item) => (
-          <View key={item.label} style={styles.statusItem}>
-            <View style={styles.statusLabel}>
-              <View
-                style={[styles.statusDot, { backgroundColor: item.color }]}
-              />
-              <Text style={styles.statusText}>{item.label}</Text>
-            </View>
-            <View style={styles.statusValue}>
-              <Text style={styles.statusCount}>{item.value}</Text>
-              <Text style={styles.statusPercent}>({item.percentage}%)</Text>
+      {/* Pie Chart - Booking Status */}
+      {stats.totalBookings > 0 && (
+        <View style={styles.chartSection}>
+          <Text style={styles.sectionTitle}>📊 Phân bố trạng thái</Text>
+          <View style={styles.pieChartContainer}>
+            <PieChart data={bookingStatusData} size={160} />
+            <View style={styles.legendContainer}>
+              {bookingStatusData.map((item) => (
+                <View key={item.label} style={styles.legendItem}>
+                  <View style={[styles.legendColor, { backgroundColor: item.color }]} />
+                  <View style={styles.legendText}>
+                    <Text style={styles.legendLabel}>{item.label}</Text>
+                    <Text style={styles.legendValue}>{item.value} ({item.percentage}%)</Text>
+                  </View>
+                </View>
+              ))}
             </View>
           </View>
-        ))}
-
-        {/* Visual Bar */}
-        <View style={styles.barContainer}>
-          {bookingStatusData.map((item, index) => (
-            <View
-              key={index}
-              style={[
-                styles.barSegment,
-                {
-                  width: `${item.percentage}%`,
-                  backgroundColor: item.color,
-                },
-              ]}
-            />
-          ))}
-        </View>
-      </View>
-
-      {/* Top Fields by Bookings */}
-      {topFields.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Top sân được đặt nhiều</Text>
-          {topFields.map((item, index) => (
-            <View key={index} style={styles.topFieldItem}>
-              <View style={styles.topFieldRank}>
-                <Text style={styles.rankNumber}>{index + 1}</Text>
-              </View>
-              <View style={styles.topFieldName}>
-                <Text style={styles.topFieldText}>{item.field}</Text>
-              </View>
-              <View style={styles.topFieldCount}>
-                <Text style={styles.topFieldCountText}>{item.count}đ</Text>
-              </View>
-            </View>
-          ))}
         </View>
       )}
 
-      {/* Booking Status Summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tóm tắt</Text>
+      {/* Bar Chart - Top Fields */}
+      {topFields.length > 0 && (
+        <View style={styles.chartSection}>
+          <Text style={styles.sectionTitle}>🏆 Top sân được đặt</Text>
+          <View style={styles.barChartContainer}>
+            {topFields.map((item, index) => {
+              const getBarColor = (idx: number) => {
+                if (idx === 0) return "#4CAF50";
+                if (idx === 1) return "#2196F3";
+                if (idx === 2) return "#FF9800";
+                return "#F44336";
+              };
+              return (
+                <View key={item.field} style={styles.barChartItem}>
+                  <View style={styles.barChartLabel}>
+                    <Text style={styles.barChartRank}>#{index + 1}</Text>
+                    <Text style={styles.barChartName} numberOfLines={1}>
+                      {item.field}
+                    </Text>
+                  </View>
+                  <View style={styles.barChartBar}>
+                    <View
+                      style={[
+                        styles.barChartProgress,
+                        {
+                          width: `${(item.count / maxFieldBookings) * 100}%`,
+                          backgroundColor: getBarColor(index),
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.barChartValue}>{item.count}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* Summary Cards */}
+      <View style={styles.summarySection}>
+        <Text style={styles.sectionTitle}>📈 Tóm tắt</Text>
         <View style={styles.summaryGrid}>
+          <SummaryCard label="Chờ Xác Nhận" value={stats.pendingBookings.toString()} color="#FFC107" icon="⏳" />
+          <SummaryCard label="Đã Hủy" value={stats.cancelledBookings.toString()} color="#F44336" icon="❌" />
           <SummaryCard
-            label="Chờ xác nhận"
-            value={stats.pendingBookings}
-            color="#FFC107"
-          />
-          <SummaryCard
-            label="Hủy"
-            value={stats.cancelledBookings}
-            color="#F44336"
-          />
-          <SummaryCard
-            label="Tỉ lệ xác nhận"
+            label="Tỉ Lệ Xác Nhận"
             value={
               stats.totalBookings > 0
-                ? (
-                    (stats.confirmedBookings / stats.totalBookings) *
-                    100
-                  ).toFixed(1) + "%"
+                ? ((stats.confirmedBookings / stats.totalBookings) * 100).toFixed(0) + "%"
                 : "0%"
             }
             color="#4CAF50"
+            icon="✅"
           />
         </View>
       </View>
 
-      {/* No Data Warning */}
+      {/* No Data State */}
       {stats.totalBookings === 0 && (
         <View style={styles.noDataContainer}>
-          <Text style={styles.noDataText}>
-            Chưa có dữ liệu đặt sân. Hãy chờ người dùng đặt sân.
-          </Text>
+          <Text style={styles.noDataIcon}>📭</Text>
+          <Text style={styles.noDataText}>Chưa có dữ liệu đặt sân</Text>
+          <Text style={styles.noDataSubtext}>Hãy chờ người dùng đặt sân để xem thống kê</Text>
         </View>
       )}
+
+      <View style={{ height: 20 }} />
     </ScrollView>
   );
 }
 
+// ======== Pie Chart Component ========
+interface PieChartProps {
+  data: { label: string; value: number; color: string; percentage: string }[];
+  size: number;
+}
+
+const PieChart: React.FC<PieChartProps> = ({ data, size }) => {
+  const radius = size / 2 - 10;
+  let currentAngle = -Math.PI / 2;
+  const center = size / 2;
+
+  const slices = data.map((item) => {
+    const sliceAngle = (item.value / data.reduce((sum, d) => sum + d.value, 0)) * 2 * Math.PI;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + sliceAngle;
+
+    const startX = center + radius * Math.cos(startAngle);
+    const startY = center + radius * Math.sin(startAngle);
+    const endX = center + radius * Math.cos(endAngle);
+    const endY = center + radius * Math.sin(endAngle);
+
+    const largeArc = sliceAngle > Math.PI ? 1 : 0;
+
+    const pathData = [
+      `M ${center} ${center}`,
+      `L ${startX} ${startY}`,
+      `A ${radius} ${radius} 0 ${largeArc} 1 ${endX} ${endY}`,
+      "Z",
+    ].join(" ");
+
+    currentAngle = endAngle;
+
+    return { pathData, color: item.color, label: item.label };
+  });
+
+  return (
+    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {slices.map((slice) => (
+        <Path key={slice.label} d={slice.pathData} fill={slice.color} strokeWidth={1.5} stroke="#fff" />
+      ))}
+      <Circle cx={center} cy={center} r={radius * 0.45} fill={colors.cardBg} />
+    </Svg>
+  );
+};
+
+// ======== Components ========
 interface MetricCardProps {
   label: string;
   value: string;
@@ -281,12 +297,7 @@ interface MetricCardProps {
   color: string;
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({
-  label,
-  value,
-  icon,
-  color,
-}) => (
+const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon, color }) => (
   <View style={[styles.metricCard, { borderLeftColor: color }]}>
     <Text style={styles.metricIcon}>{icon}</Text>
     <View style={styles.metricContent}>
@@ -298,13 +309,14 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
 interface SummaryCardProps {
   label: string;
-  value: string | number;
+  value: string;
   color: string;
+  icon: string;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, color }) => (
+const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, color, icon }) => (
   <View style={styles.summaryCard}>
-    <View style={[styles.summaryColorBar, { backgroundColor: color }]} />
+    <Text style={styles.summaryIcon}>{icon}</Text>
     <Text style={styles.summaryLabel}>{label}</Text>
     <Text style={[styles.summaryValue, { color }]}>{value}</Text>
   </View>
@@ -313,211 +325,220 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, color }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
+    backgroundColor: colors.darkBg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F4F6F8",
+    backgroundColor: colors.darkBg,
   },
   header: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    backgroundColor: colors.cardBg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    paddingTop: spacing.md,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: colors.border,
+    ...shadows.lg,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: fonts.sizes["2xl"],
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+  },
+  headerSubtitle: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
   },
   backButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.secondary,
+    borderRadius: radius.md,
   },
   backButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#333",
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.xs,
   },
   metricsContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
   },
   metricCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: colors.cardBg,
+    borderRadius: radius.lg,
+    padding: spacing.md,
     flexDirection: "row",
     alignItems: "center",
     borderLeftWidth: 4,
-    elevation: 2,
+    ...shadows.md,
   },
   metricIcon: {
-    fontSize: 28,
-    marginRight: 12,
+    fontSize: fonts.sizes["2xl"],
+    marginRight: spacing.md,
   },
   metricContent: {
     flex: 1,
   },
   metricLabel: {
-    fontSize: 12,
-    color: "#999",
-    marginBottom: 4,
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
   metricValue: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
   },
-  section: {
-    backgroundColor: "#fff",
-    marginHorizontal: 12,
-    marginVertical: 8,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    elevation: 2,
+  chartSection: {
+    backgroundColor: colors.cardBg,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.md,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    ...shadows.md,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#333",
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
-  statusItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  statusLabel: {
+  pieChartContainer: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-around",
+    marginTop: spacing.md,
   },
-  statusDot: {
+  legendContainer: {
+    flex: 1,
+    marginLeft: spacing.lg,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  legendColor: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    marginRight: 8,
+    marginRight: spacing.md,
   },
-  statusText: {
-    fontSize: 13,
-    color: "#666",
-  },
-  statusValue: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  statusCount: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  statusPercent: {
-    fontSize: 11,
-    color: "#999",
-  },
-  barContainer: {
-    flexDirection: "row",
-    height: 20,
-    borderRadius: 10,
-    marginTop: 12,
-    overflow: "hidden",
-  },
-  barSegment: {
-    height: "100%",
-  },
-  topFieldItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  topFieldRank: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#1976D2",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  rankNumber: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 12,
-  },
-  topFieldName: {
+  legendText: {
     flex: 1,
   },
-  topFieldText: {
-    fontSize: 13,
-    color: "#333",
-    fontWeight: "500",
+  legendLabel: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
   },
-  topFieldCount: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 6,
+  legendValue: {
+    fontSize: fonts.sizes.sm,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
   },
-  topFieldCountText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#1976D2",
+  barChartContainer: {
+    marginTop: spacing.md,
+  },
+  barChartItem: {
+    marginBottom: spacing.lg,
+  },
+  barChartLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  barChartRank: {
+    fontSize: fonts.sizes.sm,
+    fontWeight: fonts.weights.bold,
+    color: colors.primary,
+    marginRight: spacing.md,
+    width: 30,
+  },
+  barChartName: {
+    flex: 1,
+    fontSize: fonts.sizes.sm,
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.semibold,
+  },
+  barChartBar: {
+    height: 24,
+    backgroundColor: colors.darkBg,
+    borderRadius: radius.md,
+    overflow: "hidden",
+    marginBottom: spacing.sm,
+  },
+  barChartProgress: {
+    height: "100%",
+    borderRadius: radius.md,
+  },
+  barChartValue: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    fontWeight: fonts.weights.bold,
+  },
+  summarySection: {
+    backgroundColor: colors.cardBg,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.md,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    ...shadows.md,
   },
   summaryGrid: {
     flexDirection: "row",
-    gap: 10,
+    gap: spacing.md,
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: colors.darkBg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  summaryColorBar: {
-    width: "100%",
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 8,
+  summaryIcon: {
+    fontSize: fonts.sizes["2xl"],
+    marginBottom: spacing.sm,
   },
   summaryLabel: {
-    fontSize: 11,
-    color: "#999",
-    marginBottom: 4,
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
     textAlign: "center",
   },
   summaryValue: {
-    fontSize: 14,
-    fontWeight: "bold",
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
   },
   noDataContainer: {
-    backgroundColor: "#fff",
-    marginHorizontal: 12,
-    marginVertical: 16,
-    borderRadius: 12,
-    paddingVertical: 24,
-    justifyContent: "center",
     alignItems: "center",
-    elevation: 2,
+    marginVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  noDataIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
   },
   noDataText: {
-    fontSize: 13,
-    color: "#999",
-    fontStyle: "italic",
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  noDataSubtext: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    textAlign: "center",
   },
 });

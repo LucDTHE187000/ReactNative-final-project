@@ -41,6 +41,7 @@ export default function BookingsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const { token, logout, user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -96,6 +97,37 @@ export default function BookingsScreen() {
     } finally {
       setCancelling(null);
     }
+  };
+
+  /**
+   * Author: Dương Trọng Lực - mssv: HE187000
+   * Param: bookingId - ID booking cần xóa
+   * Description: Gọi API DELETE xóa hẳn booking khỏi DB, chỉ admin có quyền
+   */
+  const doDeleteBooking = async (bookingId: string) => {
+    setDeleting(bookingId);
+    try {
+      await API.delete(`/bookings/${bookingId}`);
+      setSelectedBooking(null);
+      Alert.alert("Thành công", "Booking đã được xóa");
+      fetchBookings();
+    } catch (error: any) {
+      console.error("Delete booking error:", error.response?.data ?? error.message);
+      Alert.alert("Lỗi", error.response?.data?.message || "Không thể xóa booking");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleDeleteBooking = (bookingId: string) => {
+    Alert.alert(
+      "Xác nhận xóa",
+      "Bạn chắc chắn muốn xóa booking này? Thao tác này không thể hoàn tác.",
+      [
+        { text: "Hủy" },
+        { text: "Xóa", style: "destructive", onPress: () => { doDeleteBooking(bookingId); } },
+      ]
+    );
   };
 
   const handleCancelBooking = (bookingId: string) => {
@@ -361,16 +393,28 @@ export default function BookingsScreen() {
                   )}
 
                   {/* Admin actions */}
-                  {isAdmin && canCancel(selectedBooking) && (
+                  {isAdmin && (
                     <View style={styles.modalActions}>
+                      {canCancel(selectedBooking) && (
+                        <TouchableOpacity
+                          style={[styles.cancelButton, cancelling === selectedBooking._id && styles.cancelButtonDisabled]}
+                          disabled={cancelling === selectedBooking._id}
+                          onPress={() => handleCancelBooking(selectedBooking._id)}
+                        >
+                          {cancelling === selectedBooking._id
+                            ? <ActivityIndicator color="#fff" size="small" />
+                            : <Text style={styles.cancelText}>❌ Hủy đơn này</Text>
+                          }
+                        </TouchableOpacity>
+                      )}
                       <TouchableOpacity
-                        style={[styles.cancelButton, cancelling === selectedBooking._id && styles.cancelButtonDisabled]}
-                        disabled={cancelling === selectedBooking._id}
-                        onPress={() => handleCancelBooking(selectedBooking._id)}
+                        style={[styles.deleteButton, deleting === selectedBooking._id && styles.cancelButtonDisabled]}
+                        disabled={deleting === selectedBooking._id}
+                        onPress={() => handleDeleteBooking(selectedBooking._id)}
                       >
-                        {cancelling === selectedBooking._id
+                        {deleting === selectedBooking._id
                           ? <ActivityIndicator color="#fff" size="small" />
-                          : <Text style={styles.cancelText}>🗑️ Hủy đơn này</Text>
+                          : <Text style={styles.cancelText}>🗑️ Xóa booking</Text>
                         }
                       </TouchableOpacity>
                     </View>
@@ -606,6 +650,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     borderRadius: radius.md,
     alignItems: "center",
+  },
+  deleteButton: {
+    backgroundColor: "#B71C1C",
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    alignItems: "center",
+    marginTop: spacing.sm,
   },
   cancelButtonDisabled: {
     opacity: 0.6,

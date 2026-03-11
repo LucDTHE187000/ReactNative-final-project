@@ -25,6 +25,9 @@ router.get("/", protect, admin, bookingController.getAllBookings);
 // 📌 Update booking status (admin only)
 router.put("/:id/status", protect, admin, bookingController.updateBookingStatus);
 
+// 📌 Delete booking (admin only)
+router.delete("/:id", protect, admin, bookingController.deleteBooking);
+
 // 📌 Confirm payment
 router.put("/:id/confirm", protect, bookingController.confirmPayment);
 

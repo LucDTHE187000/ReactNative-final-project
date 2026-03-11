@@ -22,6 +22,8 @@ app.use(express.json());
 
 // 📁 Serve static files (images)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// 📁 Alias: /images → uploads/images (backward compat với seed data cũ)
+app.use("/images", express.static(path.join(__dirname, "uploads/images")));
 
 // 📁 Serve static HTML/CSS/JS interface
 app.use(express.static(path.join(__dirname, "public")));

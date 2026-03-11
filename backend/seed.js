@@ -31,7 +31,8 @@ const seedData = async () => {
     console.log("✅ Admin user created");
 
     // ✅ Tạo các sân bóng
-    const serverUrl = process.env.SERVER_URL || "http://localhost:5000";
+    // Lưu relative path thay vì full URL để frontend tự build dynamic URL
+    const serverUrl = "";
     
     // 📊 Hàm helper tạo priceSchedule
     const createPriceSchedule = (morningPrice, peakPrice, vipPrice) => [

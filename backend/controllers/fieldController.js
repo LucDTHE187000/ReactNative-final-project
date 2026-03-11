@@ -3,7 +3,7 @@ import Field from "../models/Field.js";
 // 📌 Get all fields (public)
 export const getAllFields = async (req, res) => {
   try {
-    const fields = await Field.find({ isActive: true }).select("-owner");
+    const fields = await Field.find({ isActive: true });
     res.json(fields);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -67,8 +67,8 @@ export const updateField = async (req, res) => {
       return res.status(404).json({ message: "Field not found" });
     }
 
-    // Check if user is owner
-    if (field.owner.toString() !== req.user._id.toString()) {
+    // Check if user is owner or admin
+    if (req.user.role !== "admin" && field.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized to update this field" });
     }
 
@@ -93,7 +93,7 @@ export const updateField = async (req, res) => {
   }
 };
 
-// 📌 Delete field (admin only)
+// 📌 Delete field (fieldOwner xóa sân của mình, admin xóa bất kỳ)
 export const deleteField = async (req, res) => {
   try {
     const field = await Field.findById(req.params.id);
@@ -101,7 +101,11 @@ export const deleteField = async (req, res) => {
       return res.status(404).json({ message: "Field not found" });
     }
 
-    // Admin can delete any field (owner check removed)
+    // fieldOwner chỉ xóa sân của chính mình, admin xóa bất kỳ
+    if (req.user.role !== "admin" && field.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Bạn không có quyền xóa sân này" });
+    }
+
     await Field.findByIdAndDelete(req.params.id);
     res.json({ message: "Field deleted" });
   } catch (error) {
