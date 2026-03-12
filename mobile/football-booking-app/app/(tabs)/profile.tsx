@@ -19,6 +19,7 @@ interface UserStats {
   confirmedBookings: number;
   cancelledBookings: number;
   totalSpent: number;
+  totalFields?: number;
 }
 
 export default function ProfileScreen() {
@@ -33,7 +34,7 @@ export default function ProfileScreen() {
       const response = await API.get("/bookings/my-bookings");
       const bookings = response.data;
 
-      const stats = {
+      const stats: UserStats = {
         totalBookings: bookings.length,
         confirmedBookings: bookings.filter(
           (b: any) => b.status === "confirmed"
@@ -46,6 +47,16 @@ export default function ProfileScreen() {
           0
         ),
       };
+
+      // Fetch field count for admin
+      if (user?.role === "admin") {
+        try {
+          const fieldsRes = await API.get("/fields");
+          stats.totalFields = fieldsRes.data.length;
+        } catch {
+          stats.totalFields = 0;
+        }
+      }
 
       setStats(stats);
     } catch (error: any) {
@@ -155,6 +166,14 @@ export default function ProfileScreen() {
             </Text>
             <Text style={styles.statLabel}>Tiền Đã Chi</Text>
           </View>
+          {user?.role === "admin" && stats.totalFields !== undefined && (
+            <View style={[styles.statCard, { width: "100%" }]}>
+              <Text style={[styles.statValue, { color: "#2196F3" }]}>
+                {stats.totalFields}
+              </Text>
+              <Text style={styles.statLabel}>Tổng Sân Hiện Tại</Text>
+            </View>
+          )}
         </View>
       )}
 

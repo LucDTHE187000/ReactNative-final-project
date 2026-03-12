@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   ScrollView,
+  Platform,
 } from "react-native";
 import API from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -120,6 +121,12 @@ export default function BookingsScreen() {
   };
 
   const handleDeleteBooking = (bookingId: string) => {
+    if (Platform.OS === "web") {
+      if (window.confirm("Bạn chắc chắn muốn xóa booking này? Thao tác này không thể hoàn tác.")) {
+        doDeleteBooking(bookingId);
+      }
+      return;
+    }
     Alert.alert(
       "Xác nhận xóa",
       "Bạn chắc chắn muốn xóa booking này? Thao tác này không thể hoàn tác.",
@@ -131,6 +138,12 @@ export default function BookingsScreen() {
   };
 
   const handleCancelBooking = (bookingId: string) => {
+    if (Platform.OS === "web") {
+      if (window.confirm("Bạn chắc chắn muốn hủy đặt sân này?")) {
+        doCancelBooking(bookingId);
+      }
+      return;
+    }
     Alert.alert(
       "Xác nhận hủy",
       "Bạn chắc chắn muốn hủy đặt sân này?",
