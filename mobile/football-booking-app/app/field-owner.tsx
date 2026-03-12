@@ -31,14 +31,30 @@ interface Field {
   owner: string;
 }
 
+interface FieldBooking {
+  _id: string;
+  orderCode?: string;
+  user?: { name: string; email: string };
+  field?: { name: string; location: string };
+  date: string;
+  startHour: number;
+  endHour: number;
+  totalPrice: number;
+  status: "pending" | "confirmed" | "cancelled";
+  paymentStatus: string;
+}
+
 export default function FieldOwnerPanel() {
+  const [activeTab, setActiveTab] = useState<"fields" | "bookings">("fields");
   const [fields, setFields] = useState<Field[]>([]);
+  const [fieldBookings, setFieldBookings] = useState<FieldBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingField, setEditingField] = useState<Field | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [processingBooking, setProcessingBooking] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -70,6 +86,41 @@ export default function FieldOwnerPanel() {
     }
   };
 
+  /**
+   * Author: Dương Trọng Lực - mssv: HE187000
+   * Param: none
+   * Description: Lấy tất cả booking của các sân mà field owner đang quản lý
+   */
+  const fetchFieldBookings = async () => {
+    try {
+      const res = await API.get("/bookings/field-owner-bookings");
+      setFieldBookings(res.data);
+    } catch (error: any) {
+      console.log("Fetch field bookings error:", error);
+    }
+  };
+
+  /**
+   * Author: Dương Trọng Lực - mssv: HE187000
+   * Param: bookingId - ID booking cần duyệt/từ chối
+   * Description: Approve hoặc reject booking từ field owner panel
+   */
+  const handleBookingAction = async (bookingId: string, action: "approve" | "reject") => {
+    setProcessingBooking(bookingId);
+    try {
+      await API.put(`/bookings/${bookingId}/${action}`);
+      Alert.alert(
+        "Thành công",
+        action === "approve" ? "Đã xác nhận booking" : "Đã từ chối booking"
+      );
+      fetchFieldBookings();
+    } catch (error: any) {
+      Alert.alert("Lỗi", error.response?.data?.message || "Không thể thực hiện");
+    } finally {
+      setProcessingBooking(null);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       if (!token || (user?.role !== "fieldOwner" && user?.role !== "admin")) {
@@ -78,6 +129,7 @@ export default function FieldOwnerPanel() {
         return;
       }
       fetchFields();
+      fetchFieldBookings();
     }, [token, user])
   );
 
@@ -270,71 +322,158 @@ export default function FieldOwnerPanel() {
         </TouchableOpacity>
       </View>
 
-      {/* Add Button */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => openModal()}
-      >
-        <Text style={styles.addButtonText}>+ Thêm Sân Mới</Text>
-      </TouchableOpacity>
+      {/* Tab Switcher */}
+      <View style={styles.tabRow}>
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === "fields" && styles.tabBtnActive]}
+          onPress={() => setActiveTab("fields")}
+        >
+          <Text style={[styles.tabBtnText, activeTab === "fields" && styles.tabBtnTextActive]}>
+            🏟️ Sân Của Tôi
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === "bookings" && styles.tabBtnActive]}
+          onPress={() => setActiveTab("bookings")}
+        >
+          <Text style={[styles.tabBtnText, activeTab === "bookings" && styles.tabBtnTextActive]}>
+            📋 Đơn Đặt Sân {fieldBookings.filter((b) => b.status === "pending").length > 0
+              ? `(${fieldBookings.filter((b) => b.status === "pending").length})`
+              : ""}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* Fields List */}
-      {fields.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Bạn chưa có sân bóng nào</Text>
+      {/* Tab: Fields */}
+      {activeTab === "fields" && (
+        <>
+          {/* Add Button */}
           <TouchableOpacity
-            style={styles.emptyButton}
+            style={styles.addButton}
             onPress={() => openModal()}
           >
-            <Text style={styles.emptyButtonText}>Tạo sân đầu tiên</Text>
+            <Text style={styles.addButtonText}>+ Thêm Sân Mới</Text>
           </TouchableOpacity>
-        </View>
-      ) : (
+
+          {/* Fields List */}
+          {fields.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Bạn chưa có sân bóng nào</Text>
+              <TouchableOpacity
+                style={styles.emptyButton}
+                onPress={() => openModal()}
+              >
+                <Text style={styles.emptyButtonText}>Tạo sân đầu tiên</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={fields}
+              keyExtractor={(item) => item._id}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+              }
+              renderItem={({ item }) => (
+                <View style={styles.card}>
+                  {item.image && (
+                    <Image
+                      source={{ uri: getImageUrl(item.image) || undefined }}
+                      style={styles.cardImage}
+                    />
+                  )}
+                  <View style={styles.cardContent}>
+                    <Text style={styles.fieldName}>{item.name}</Text>
+                    <Text style={styles.fieldInfo}>📍 {item.location}</Text>
+                    <Text style={styles.fieldInfo}>🏅 {item.type}</Text>
+                    <Text style={styles.priceInfo}>
+                      💰 {item.pricePerHour.toLocaleString()}đ / giờ
+                    </Text>
+                    <View style={styles.statusContainer}>
+                      <Text style={styles.statusText}>
+                        {item.isActive ? "✅ Đang hoạt động" : "⛔ Tạm dừng"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.actions}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => openModal(item)}
+                    >
+                      <Text style={styles.editText}>Sửa</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDelete(item._id)}
+                    >
+                      <Text style={styles.deleteText}>Xóa</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            />
+          )}
+        </>
+      )}
+
+      {/* Tab: Bookings */}
+      {activeTab === "bookings" && (
         <FlatList
-          data={fields}
+          data={fieldBookings}
           keyExtractor={(item) => item._id}
           contentContainerStyle={{ paddingBottom: 20 }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchFieldBookings().finally(() => setRefreshing(false)); }} />
           }
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              {item.image && (
-                <Image
-                  source={{ uri: getImageUrl(item.image) || undefined }}
-                  style={styles.cardImage}
-                />
-              )}
-              <View style={styles.cardContent}>
-                <Text style={styles.fieldName}>{item.name}</Text>
-                <Text style={styles.fieldInfo}>📍 {item.location}</Text>
-                <Text style={styles.fieldInfo}>🏅 {item.type}</Text>
-                <Text style={styles.priceInfo}>
-                  💰 {item.pricePerHour.toLocaleString()}đ / giờ
-                </Text>
-                <View style={styles.statusContainer}>
-                  <Text style={styles.statusText}>
-                    {item.isActive ? "✅ Đang hoạt động" : "⛔ Tạm dừng"}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => openModal(item)}
-                >
-                  <Text style={styles.editText}>Sửa</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDelete(item._id)}
-                >
-                  <Text style={styles.deleteText}>Xóa</Text>
-                </TouchableOpacity>
-              </View>
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Chưa có đơn đặt sân nào</Text>
             </View>
-          )}
+          }
+          renderItem={({ item }) => {
+            const statusColor = item.status === "confirmed" ? "#4CAF50" : item.status === "cancelled" ? "#EF5350" : "#FFA726";
+            const parts = item.date?.substring(0, 10).split("-") ?? [];
+            const dateStr = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : item.date;
+            return (
+              <View style={[styles.bookingCard, { borderLeftColor: statusColor }]}>
+                <View style={styles.bookingHeader}>
+                  <Text style={styles.bookingField}>{item.field?.name || "—"}</Text>
+                  <View style={[styles.bookingBadge, { backgroundColor: statusColor }]}>
+                    <Text style={styles.bookingBadgeText}>
+                      {item.status === "confirmed" ? "Đã xác nhận" : item.status === "cancelled" ? "Đã hủy" : "Chờ duyệt"}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.bookingInfo}>👤 {item.user?.name || "—"} • {item.user?.email || ""}</Text>
+                <Text style={styles.bookingInfo}>📅 {dateStr} • {item.startHour}:00 - {item.endHour}:00</Text>
+                <Text style={styles.bookingPrice}>💰 {item.totalPrice?.toLocaleString()}đ</Text>
+                <Text style={styles.bookingCode}>#{item.orderCode || item._id}</Text>
+
+                {item.status === "pending" && (
+                  <View style={styles.bookingActions}>
+                    <TouchableOpacity
+                      style={[styles.approveBtn, processingBooking === item._id && { opacity: 0.6 }]}
+                      disabled={processingBooking === item._id}
+                      onPress={() => handleBookingAction(item._id, "approve")}
+                    >
+                      {processingBooking === item._id
+                        ? <ActivityIndicator color="#fff" size="small" />
+                        : <Text style={styles.actionBtnText}>✅ Xác nhận</Text>
+                      }
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.rejectBtn, processingBooking === item._id && { opacity: 0.6 }]}
+                      disabled={processingBooking === item._id}
+                      onPress={() => handleBookingAction(item._id, "reject")}
+                    >
+                      <Text style={styles.actionBtnText}>❌ Từ chối</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          }}
         />
       )}
 
@@ -766,5 +905,102 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: colors.textPrimary,
     fontWeight: fonts.weights.bold,
+  },
+  // --- Booking Tab Styles ---
+  tabRow: {
+    flexDirection: "row",
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.cardBg,
+    borderRadius: radius.md,
+    overflow: "hidden",
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm + 2,
+    alignItems: "center",
+  },
+  tabBtnActive: {
+    backgroundColor: colors.primary,
+  },
+  tabBtnText: {
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.sm,
+    fontWeight: fonts.weights.semibold,
+  },
+  tabBtnTextActive: {
+    color: "#fff",
+  },
+  bookingCard: {
+    backgroundColor: colors.cardBg,
+    borderRadius: radius.md,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  bookingHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  bookingField: {
+    color: colors.textPrimary,
+    fontSize: fonts.sizes.md,
+    fontWeight: fonts.weights.bold,
+    flex: 1,
+    marginRight: 8,
+  },
+  bookingBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  bookingBadgeText: {
+    color: "#fff",
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.bold,
+  },
+  bookingInfo: {
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.sm,
+    marginTop: 2,
+  },
+  bookingPrice: {
+    color: colors.primary,
+    fontSize: fonts.sizes.md,
+    fontWeight: fonts.weights.bold,
+    marginTop: 4,
+  },
+  bookingCode: {
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.xs,
+    marginTop: 2,
+  },
+  bookingActions: {
+    flexDirection: "row",
+    marginTop: spacing.sm,
+    gap: 8,
+  },
+  approveBtn: {
+    flex: 1,
+    backgroundColor: colors.success,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    alignItems: "center",
+  },
+  rejectBtn: {
+    flex: 1,
+    backgroundColor: colors.error,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    alignItems: "center",
+  },
+  actionBtnText: {
+    color: "#fff",
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.sm,
   },
 });

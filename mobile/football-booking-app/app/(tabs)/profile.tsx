@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   ScrollView,
   Alert,
   RefreshControl,
+  Modal,
+  TextInput,
+  Platform,
 } from "react-native";
 import API from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,7 +29,14 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { user, logout, token } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editCurrentPassword, setEditCurrentPassword] = useState("");
+  const [editNewPassword, setEditNewPassword] = useState("");
+  const [editConfirmPassword, setEditConfirmPassword] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const { user, logout, token, updateUser } = useAuth();
 
   const fetchStats = async () => {
     try {
@@ -71,6 +81,66 @@ export default function ProfileScreen() {
     }
   };
 
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await API.get("/notifications/unread-count");
+      setUnreadCount(res.data.count || 0);
+    } catch {
+      // ignore notification errors
+    }
+  };
+
+  /**
+   * Author: Dương Trọng Lực - mssv: HE187000
+   * Param: none
+   * Description: Gửi yêu cầu cập nhật tên và/hoặc mật khẩu cho tài khoản hiện tại
+   */
+  const handleEditProfile = async () => {
+    if (!editName.trim()) {
+      Alert.alert("Lỗi", "Tên không được để trống");
+      return;
+    }
+    if (editNewPassword && editNewPassword !== editConfirmPassword) {
+      Alert.alert("Lỗi", "Mật khẩu mới không khớp");
+      return;
+    }
+    if (editNewPassword && editNewPassword.length < 6) {
+      Alert.alert("Lỗi", "Mật khẩu mới phải có ít nhất 6 ký tự");
+      return;
+    }
+    if (editNewPassword && !editCurrentPassword) {
+      Alert.alert("Lỗi", "Vui lòng nhập mật khẩu hiện tại");
+      return;
+    }
+    setEditSubmitting(true);
+    try {
+      const payload: any = { name: editName.trim() };
+      if (editNewPassword) {
+        payload.currentPassword = editCurrentPassword;
+        payload.newPassword = editNewPassword;
+      }
+      const res = await API.put("/auth/profile", payload);
+      await updateUser(res.data.user);
+      setEditModalVisible(false);
+      setEditCurrentPassword("");
+      setEditNewPassword("");
+      setEditConfirmPassword("");
+      Alert.alert("Thành công", "Hồ sơ đã được cập nhật");
+    } catch (error: any) {
+      Alert.alert("Lỗi", error.response?.data?.message || "Không thể cập nhật hồ sơ");
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const openEditModal = () => {
+    setEditName(user?.name || "");
+    setEditCurrentPassword("");
+    setEditNewPassword("");
+    setEditConfirmPassword("");
+    setEditModalVisible(true);
+  };
+
   useFocusEffect(
     useCallback(() => {
       if (!token) {
@@ -78,6 +148,7 @@ export default function ProfileScreen() {
         return;
       }
       fetchStats();
+      fetchUnreadCount();
     }, [token])
   );
 
@@ -126,6 +197,9 @@ export default function ProfileScreen() {
           </Text>
         </View>
         <View style={styles.userInfo}>
+          <TouchableOpacity style={styles.editProfileBtn} onPress={openEditModal}>
+            <Text style={styles.editProfileBtnText}>✏️ Sửa hồ sơ</Text>
+          </TouchableOpacity>
           <Text style={styles.userName}>{user?.name || "User"}</Text>
           <Text style={styles.userEmail}>{user?.email || ""}</Text>
           {user?.role === "admin" && (
@@ -205,6 +279,23 @@ export default function ProfileScreen() {
           <Text style={styles.actionArrow}>›</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.actionItem}
+          onPress={() => router.push("/notifications" as any)}
+        >
+          <Text style={styles.actionIcon}>🔔</Text>
+          <View style={styles.actionContent}>
+            <Text style={styles.actionTitle}>Thông Báo</Text>
+            <Text style={styles.actionDesc}>Xem các thông báo của bạn</Text>
+          </View>
+          {unreadCount > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
+            </View>
+          )}
+          <Text style={styles.actionArrow}>›</Text>
+        </TouchableOpacity>
+
         {user?.role === "admin" && (
           <TouchableOpacity
             style={styles.actionItem}
@@ -279,6 +370,89 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       <View style={styles.footer} />
+
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>✏️ Sửa Hồ Sơ</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.inputLabel}>Tên hiển thị</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Nhập tên của bạn"
+                placeholderTextColor={colors.textSecondary}
+                editable={!editSubmitting}
+              />
+
+              <Text style={[styles.inputLabel, { marginTop: spacing.lg }]}>
+                Đổi mật khẩu (bỏ trống nếu không muốn đổi)
+              </Text>
+              <TextInput
+                style={styles.editInput}
+                value={editCurrentPassword}
+                onChangeText={setEditCurrentPassword}
+                placeholder="Mật khẩu hiện tại"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+                editable={!editSubmitting}
+              />
+              <TextInput
+                style={styles.editInput}
+                value={editNewPassword}
+                onChangeText={setEditNewPassword}
+                placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+                editable={!editSubmitting}
+              />
+              <TextInput
+                style={styles.editInput}
+                value={editConfirmPassword}
+                onChangeText={setEditConfirmPassword}
+                placeholder="Xác nhận mật khẩu mới"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+                editable={!editSubmitting}
+              />
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setEditModalVisible(false)}
+                disabled={editSubmitting}
+              >
+                <Text style={styles.modalCancelText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSaveBtn, editSubmitting && { opacity: 0.6 }]}
+                onPress={handleEditProfile}
+                disabled={editSubmitting}
+              >
+                {editSubmitting ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.modalSaveText}>Lưu</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -462,5 +636,113 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingBottom: spacing.xl,
+  },
+  editProfileBtn: {
+    alignSelf: "flex-start",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: `${colors.textPrimary}40`,
+    marginBottom: spacing.xs,
+  },
+  editProfileBtnText: {
+    color: colors.textPrimary,
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.semibold,
+  },
+  unreadBadge: {
+    backgroundColor: colors.error,
+    borderRadius: radius.full,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    marginRight: spacing.xs,
+  },
+  unreadBadgeText: {
+    color: "#fff",
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.bold,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: colors.cardBg,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    color: colors.textPrimary,
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
+  },
+  modalClose: {
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.xl,
+    padding: spacing.xs,
+  },
+  modalBody: {
+    padding: spacing.lg,
+  },
+  inputLabel: {
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.sm,
+    fontWeight: fonts.weights.semibold,
+    marginBottom: spacing.xs,
+  },
+  editInput: {
+    backgroundColor: colors.lightBg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    color: colors.textPrimary,
+    fontSize: fonts.sizes.sm,
+    marginBottom: spacing.sm,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+  },
+  modalCancelText: {
+    color: colors.textSecondary,
+    fontWeight: fonts.weights.bold,
+  },
+  modalSaveBtn: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: "center",
+  },
+  modalSaveText: {
+    color: "#fff",
+    fontWeight: fonts.weights.bold,
   },
 });

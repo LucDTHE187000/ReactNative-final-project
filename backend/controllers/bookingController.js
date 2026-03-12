@@ -1,4 +1,6 @@
 import Booking from "../models/Booking.js";
+import Field from "../models/Field.js";
+import { createNotification } from "../utils/notificationHelper.js";
 
 // 📌 Create booking (user must be logged in)
 export const createBooking = async (req, res) => {
@@ -52,6 +54,29 @@ export const createBooking = async (req, res) => {
     });
 
     const saved = await booking.save();
+
+    // Thông báo cho chủ sân
+    try {
+      const fieldDoc = await Field.findById(field);
+      if (fieldDoc?.owner) {
+        await createNotification(
+          fieldDoc.owner,
+          "Đơn đặt sân mới",
+          `${req.user.name} vừa đặt sân ${fieldDoc.name} ngày ${date} (${start}:00 - ${end}:00)`,
+          "booking",
+          saved._id
+        );
+      }
+    } catch (_) {}
+
+    // Thông báo xác nhận cho user
+    await createNotification(
+      req.user._id,
+      "Đặt sân thành công",
+      `Đơn ${orderCode} đang chờ xác nhận. Vui lòng thanh toán để hoàn tất.`,
+      "booking",
+      saved._id
+    );
 
     res.status(201).json({
       booking: saved.toObject(),
@@ -144,8 +169,18 @@ export const cancelBooking = async (req, res) => {
     }
 
     booking.status = "cancelled";
-
     await booking.save();
+
+    // Thông báo cho user (nếu admin/field-owner hủy)
+    if (req.user._id.toString() !== booking.user.toString()) {
+      await createNotification(
+        booking.user,
+        "Booking bị hủy",
+        `Đơn ${booking.orderCode} đã bị hủy bởi quản trị viên.`,
+        "booking",
+        booking._id
+      );
+    }
 
     res.json({
       message: "✅ Booking cancelled",
@@ -211,10 +246,97 @@ export const confirmPayment = async (req, res) => {
 
     await booking.save();
 
+    // Thông báo thanh toán thành công
+    await createNotification(
+      booking.user,
+      "Thanh toán thành công ✅",
+      `Đơn ${booking.orderCode} đã được xác nhận. Chúc bạn thi đấu vui vẻ!`,
+      "payment",
+      booking._id
+    );
+
     res.json({
       message: "✅ Payment confirmed",
       booking,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 📌 Get bookings for field owner's fields
+export const getFieldOwnerBookings = async (req, res) => {
+  try {
+    const ownerFields = await Field.find({ owner: req.user._id }).select("_id");
+    const fieldIds = ownerFields.map((f) => f._id);
+
+    const bookings = await Booking.find({ field: { $in: fieldIds } })
+      .populate("user", "name email")
+      .populate("field", "name location type pricePerHour")
+      .sort({ createdAt: -1 });
+
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 📌 Approve booking (field owner confirms the slot)
+export const approveBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate("field");
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    // Kiểm tra field owner có quyền không
+    if (
+      booking.field?.owner?.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    booking.status = "confirmed";
+    await booking.save();
+
+    await createNotification(
+      booking.user,
+      "Booking đã được xác nhận ✅",
+      `Đơn ${booking.orderCode} đã được chủ sân xác nhận. Nhớ đến đúng giờ nhé!`,
+      "booking",
+      booking._id
+    );
+
+    res.json({ message: "Booking approved", booking });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 📌 Reject booking (field owner rejects)
+export const rejectBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate("field");
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+    if (
+      booking.field?.owner?.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    booking.status = "cancelled";
+    await booking.save();
+
+    await createNotification(
+      booking.user,
+      "Booking bị từ chối ❌",
+      `Đơn ${booking.orderCode} đã bị chủ sân từ chối. Vui lòng chọn khung giờ khác.`,
+      "booking",
+      booking._id
+    );
+
+    res.json({ message: "Booking rejected", booking });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

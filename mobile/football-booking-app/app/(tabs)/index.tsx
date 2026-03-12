@@ -37,6 +37,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchLocation, setSearchLocation] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
   const { token, logout, user } = useAuth();
 
   const fetchFields = async () => {
@@ -75,8 +77,16 @@ export default function HomeScreen() {
     if (typeFilter) {
       filtered = filtered.filter((field) => field.type === typeFilter);
     }
+    if (priceMin !== "") {
+      const min = Number(priceMin);
+      filtered = filtered.filter((field) => field.pricePerHour >= min);
+    }
+    if (priceMax !== "") {
+      const max = Number(priceMax);
+      filtered = filtered.filter((field) => field.pricePerHour <= max);
+    }
     setFilteredFields(filtered);
-  }, [searchLocation, typeFilter, allFields]);
+  }, [searchLocation, typeFilter, priceMin, priceMax, allFields]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -214,6 +224,36 @@ export default function HomeScreen() {
               <Picker.Item label="Sân 11" value="Sân 11" color="#cadf0c" />
             </Picker>
           </View>
+        </View>
+
+        {/* Price Range Filter */}
+        <View style={styles.priceFilterRow}>
+          <Text style={styles.priceFilterLabel}>💰 Giá (đ/giờ):</Text>
+          <TextInput
+            style={styles.priceInput}
+            placeholder="Tối thiểu"
+            placeholderTextColor={colors.textSecondary}
+            value={priceMin}
+            onChangeText={setPriceMin}
+            keyboardType="numeric"
+          />
+          <Text style={styles.priceSep}>—</Text>
+          <TextInput
+            style={styles.priceInput}
+            placeholder="Tối đa"
+            placeholderTextColor={colors.textSecondary}
+            value={priceMax}
+            onChangeText={setPriceMax}
+            keyboardType="numeric"
+          />
+          {(priceMin !== "" || priceMax !== "") && (
+            <TouchableOpacity
+              style={styles.priceClearBtn}
+              onPress={() => { setPriceMin(""); setPriceMax(""); }}
+            >
+              <Text style={styles.priceClearText}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Fields List */}
@@ -668,5 +708,45 @@ picker: {
     fontSize: fonts.sizes.sm,
     color: colors.textSecondary,
     textAlign: "center",
+  },
+  // --- Price Filter ---
+  priceFilterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  priceFilterLabel: {
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.semibold,
+  },
+  priceInput: {
+    flex: 1,
+    backgroundColor: colors.cardBg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    color: colors.textPrimary,
+    fontSize: fonts.sizes.xs,
+    textAlign: "center",
+  },
+  priceSep: {
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.sm,
+  },
+  priceClearBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.error,
+    borderRadius: radius.sm,
+  },
+  priceClearText: {
+    color: "#fff",
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.bold,
   },
 });

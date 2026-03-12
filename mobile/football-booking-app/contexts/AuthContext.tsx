@@ -16,6 +16,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, role?: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updatedUser: User) => Promise<void>;
   token: string | null;
 }
 
@@ -44,6 +45,8 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
             ...prevState,
             isSignout: false,
           };
+        case "UPDATE_USER":
+          return { ...prevState, user: action.payload };
         case "SIGN_OUT":
           return {
             ...prevState,
@@ -132,6 +135,12 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
     }
   };
 
+  // ✅ Update user profile locally
+  const updateUser = async (updatedUser: User) => {
+    await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+    dispatch({ type: "UPDATE_USER", payload: updatedUser });
+  };
+
   const value = useMemo(
     () => ({
       user: state.user,
@@ -140,9 +149,10 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
       login,
       register,
       logout,
+      updateUser,
       token: state.userToken,
     }),
-    [state.user, state.isLoading, state.isSignout, state.userToken, login, register, logout]
+    [state.user, state.isLoading, state.isSignout, state.userToken, login, register, logout, updateUser]
   );
 
   return (

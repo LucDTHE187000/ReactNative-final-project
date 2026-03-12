@@ -10,6 +10,8 @@ import authRoutes from "./routes/auth.js";
 import bookingRoutes from "./routes/booking.js";
 import fieldRoutes from "./routes/field.js";
 import paymentRoutes from "./routes/payment.js";
+import reviewRoutes from "./routes/review.js";
+import notificationRoutes from "./routes/notification.js";
 
 dotenv.config();
 
@@ -46,6 +48,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/fields", fieldRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // 📌 PayOS return/cancel URL shortcut (redirect từ /payment-result về /api/payment/payment-result)
 app.get("/payment-result", (req, res) => {

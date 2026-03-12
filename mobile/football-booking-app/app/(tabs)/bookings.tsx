@@ -11,7 +11,9 @@ import {
   Modal,
   ScrollView,
   Platform,
+  TextInput,
 } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 import API from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { router, useFocusEffect } from "expo-router";
@@ -44,6 +46,14 @@ export default function BookingsScreen() {
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  // Rating state
+  const [reviewedBookingIds, setReviewedBookingIds] = useState<Set<string>>(new Set());
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [ratingBookingId, setRatingBookingId] = useState<string | null>(null);
+  const [ratingFieldName, setRatingFieldName] = useState("");
+  const [ratingStars, setRatingStars] = useState(5);
+  const [ratingComment, setRatingComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
   const { token, logout, user } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -64,6 +74,15 @@ export default function BookingsScreen() {
     }
   };
 
+  const fetchMyReviews = async () => {
+    if (isAdmin) return;
+    try {
+      const res = await API.get("/reviews/my");
+      const ids = new Set<string>(res.data.map((r: any) => r.booking));
+      setReviewedBookingIds(ids);
+    } catch (_) {}
+  };
+
   useFocusEffect(
     useCallback(() => {
       if (!token) {
@@ -71,6 +90,7 @@ export default function BookingsScreen() {
         return;
       }
       fetchBookings();
+      fetchMyReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token, isAdmin])
   );
@@ -152,6 +172,39 @@ export default function BookingsScreen() {
         { text: "Có, hủy", onPress: () => { doCancelBooking(bookingId); } },
       ]
     );
+  };
+
+  /**
+   * Author: Dương Trọng Lực - mssv: HE187000
+   * Param: bookingId, fieldName - thông tin booking cần đánh giá
+   * Description: Mở modal đánh giá sao cho booking confirmed
+   */
+  const openRatingModal = (bookingId: string, fieldName: string) => {
+    setRatingBookingId(bookingId);
+    setRatingFieldName(fieldName);
+    setRatingStars(5);
+    setRatingComment("");
+    setRatingModalVisible(true);
+  };
+
+  /**
+   * Author: Dương Trọng Lực - mssv: HE187000
+   * Param: none (dùng state)
+   * Description: Gọi API POST /reviews để gửi đánh giá, cập nhật danh sách booking đã review
+   */
+  const submitReview = async () => {
+    if (!ratingBookingId) return;
+    setSubmittingReview(true);
+    try {
+      await API.post("/reviews", { bookingId: ratingBookingId, rating: ratingStars, comment: ratingComment });
+      setReviewedBookingIds((prev) => new Set([...prev, ratingBookingId]));
+      setRatingModalVisible(false);
+      Alert.alert("Cảm ơn!", "Đánh giá của bạn đã được ghi nhận ⭐");
+    } catch (error: any) {
+      Alert.alert("Lỗi", error.response?.data?.message || "Không thể gửi đánh giá");
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -294,13 +347,29 @@ export default function BookingsScreen() {
               </View>
             </View>
 
-            {/* Action button */}
-            <TouchableOpacity
-              style={styles.detailButton}
-              onPress={() => setSelectedBooking(item)}
-            >
-              <Text style={styles.detailButtonText}>🔍 Xem chi tiết</Text>
-            </TouchableOpacity>
+            {/* Action buttons */}
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={styles.detailButton}
+                onPress={() => setSelectedBooking(item)}
+              >
+                <Text style={styles.detailButtonText}>🔍 Xem chi tiết</Text>
+              </TouchableOpacity>
+
+              {!isAdmin && item.paymentStatus === "paid" && !reviewedBookingIds.has(item._id) && (
+                <TouchableOpacity
+                  style={styles.reviewButton}
+                  onPress={() => openRatingModal(item._id, item.field?.name || item.fieldName)}
+                >
+                  <Text style={styles.reviewButtonText}>⭐ Đánh giá</Text>
+                </TouchableOpacity>
+              )}
+              {!isAdmin && item.paymentStatus === "paid" && reviewedBookingIds.has(item._id) && (
+                <View style={styles.reviewedBadge}>
+                  <Text style={styles.reviewedText}>✅ Đã đánh giá</Text>
+                </View>
+              )}
+            </View>
           </View>
         )}
       />
@@ -373,6 +442,50 @@ export default function BookingsScreen() {
                   {/* User actions (non-admin only) */}
                   {!isAdmin && (
                     <View style={styles.modalActions}>
+                      {/* QR Ticket khi đã thanh toán */}
+                      {selectedBooking.paymentStatus === "paid" && (
+                        <View style={styles.qrContainer}>
+                          <Text style={styles.qrTitle}>🎟️ Vé Vào Sân</Text>
+                          <View style={styles.qrBox}>
+                            <QRCode
+                              value={JSON.stringify({
+                                code: selectedBooking.orderCode || selectedBooking._id,
+                                field: selectedBooking.field?.name || selectedBooking.fieldName,
+                                date: selectedBooking.date,
+                                time: `${selectedBooking.startHour}:00-${selectedBooking.endHour}:00`,
+                              })}
+                              size={160}
+                              backgroundColor="white"
+                            />
+                          </View>
+                          <Text style={styles.qrHint}>Xuất trình mã này khi đến sân</Text>
+                        </View>
+                      )}
+
+                      {/* Đánh giá sau khi đã thanh toán */}
+                      {selectedBooking.paymentStatus === "paid" &&
+                        !reviewedBookingIds.has(selectedBooking._id) && (
+                          <TouchableOpacity
+                            style={styles.reviewButton}
+                            onPress={() => {
+                              setSelectedBooking(null);
+                              openRatingModal(
+                                selectedBooking._id,
+                                selectedBooking.field?.name || selectedBooking.fieldName
+                              );
+                            }}
+                          >
+                            <Text style={styles.reviewButtonText}>⭐ Đánh giá sân</Text>
+                          </TouchableOpacity>
+                        )}
+
+                      {selectedBooking.paymentStatus === "paid" &&
+                        reviewedBookingIds.has(selectedBooking._id) && (
+                          <View style={styles.reviewedBadge}>
+                            <Text style={styles.reviewedText}>✅ Đã đánh giá</Text>
+                          </View>
+                        )}
+
                       {/* Cập nhật */}
                       {selectedBooking.status !== "cancelled" && !isPastDate(selectedBooking.date) && (
                         <TouchableOpacity
@@ -434,6 +547,63 @@ export default function BookingsScreen() {
                   )}
                 </>
               )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Rating Modal ── */}
+      <Modal
+        visible={ratingModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setRatingModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { maxHeight: "80%" }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>⭐ Đánh Giá Sân</Text>
+              <TouchableOpacity onPress={() => setRatingModalVisible(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              contentContainerStyle={{ padding: spacing.lg }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={[styles.modalFieldName, { marginBottom: spacing.lg }]}>{ratingFieldName}</Text>
+
+              {/* Star selector */}
+              <View style={styles.starRow}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <TouchableOpacity key={s} onPress={() => setRatingStars(s)}>
+                    <Text style={[styles.star, s <= ratingStars && styles.starActive]}>★</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.starLabel}>{ratingStars} / 5 sao</Text>
+
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Nhận xét của bạn (tuỳ chọn)..."
+                placeholderTextColor={colors.textSecondary}
+                value={ratingComment}
+                onChangeText={setRatingComment}
+                multiline
+                numberOfLines={3}
+              />
+
+              <TouchableOpacity
+                style={[styles.submitReviewBtn, submittingReview && styles.cancelButtonDisabled]}
+                disabled={submittingReview}
+                onPress={submitReview}
+              >
+                {submittingReview
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.submitReviewText}>Gửi đánh giá</Text>
+                }
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -547,11 +717,17 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   detailButton: {
+    flex: 1,
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     alignItems: "center",
     marginTop: spacing.lg,
+  },
+  cardActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    alignItems: "center",
   },
   detailButtonText: {
     color: colors.textPrimary,
@@ -678,5 +854,99 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.sm,
+  },
+  submitReviewBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    alignItems: "center",
+    marginTop: spacing.lg,
+  },
+  submitReviewText: {
+    color: "#fff",
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.base,
+  },
+  // ── QR Ticket ──
+  qrContainer: {
+    alignItems: "center",
+    backgroundColor: colors.lightBg,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  qrTitle: {
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
+  },
+  qrBox: {
+    padding: spacing.md,
+    backgroundColor: "#fff",
+    borderRadius: radius.md,
+  },
+  qrHint: {
+    fontSize: fonts.sizes.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+    textAlign: "center",
+  },
+  // ── Review / Rating ──
+  reviewButton: {
+    flex: 1,
+    backgroundColor: "#FF9800",
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: "center",
+    marginTop: spacing.lg,
+  },
+  reviewButtonText: {
+    color: colors.textPrimary,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.xs,
+  },
+  reviewedBadge: {
+    backgroundColor: "#1B5E20",
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  reviewedText: {
+    color: "#A5D6A7",
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.sm,
+  },
+  starRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.md,
+    marginVertical: spacing.lg,
+  },
+  star: {
+    fontSize: 40,
+    color: colors.border,
+  },
+  starActive: {
+    color: "#FFD700",
+  },
+  starLabel: {
+    textAlign: "center",
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.sm,
+    marginBottom: spacing.lg,
+  },
+  commentInput: {
+    backgroundColor: colors.lightBg,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    color: colors.textPrimary,
+    fontSize: fonts.sizes.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.xl,
+    minHeight: 80,
+    textAlignVertical: "top",
   },
 });

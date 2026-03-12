@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -74,6 +75,38 @@ router.post("/login", async (req, res) => {
         email: user.email,
         role: user.role,
       },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ================= UPDATE PROFILE =================
+router.put("/profile", protect, async (req, res) => {
+  try {
+    const { name, currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (name && name.trim()) user.name = name.trim();
+
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: "Vui lòng nhập mật khẩu hiện tại" });
+      }
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) return res.status(400).json({ message: "Mật khẩu hiện tại không đúng" });
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự" });
+      }
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+    }
+
+    await user.save();
+    res.json({
+      message: "✅ Cập nhật thành công",
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
