@@ -26,11 +26,16 @@ function RootLayoutContent() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        {token ? (
+        {/* Màn hình luôn khả dụng — kể cả Guest chưa đăng nhập */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="register" options={{ headerShown: false }} />
+        <Stack.Screen name="booking" options={{ headerShown: true, title: 'Đặt Sân' }} />
+
+        {/* Màn hình yêu cầu đăng nhập */}
+        {token && (
           <>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            <Stack.Screen name="booking" options={{ headerShown: true, title: 'Đặt Sân' }} />
             <Stack.Screen name="payment" options={{ headerShown: true, title: 'Thanh Toán' }} />
             {user?.role === 'fieldOwner' && (
               <Stack.Screen name="field-owner" options={{ headerShown: false, title: 'Sân Của Tôi' }} />
@@ -42,11 +47,6 @@ function RootLayoutContent() {
                 <Stack.Screen name="admin-users" options={{ headerShown: false, title: 'Quản Lý Tài Khoản' }} />
               </>
             )}
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="register" options={{ headerShown: false }} />
           </>
         )}
       </Stack>

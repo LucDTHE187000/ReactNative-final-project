@@ -89,15 +89,36 @@ export default function BookingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
+      if (!token) return; // Guest — không fetch, hiển thị màn hình mời đăng nhập
       fetchBookings();
       fetchMyReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token, isAdmin])
   );
+
+  // Guest chưa đăng nhập
+  if (!token) {
+    return (
+      <View style={styles.guestContainer}>
+        <View style={styles.header}>
+          <Text style={styles.title}>📅 Lịch Sử Đặt Sân</Text>
+        </View>
+        <View style={styles.guestContent}>
+          <Text style={styles.guestIcon}>🔒</Text>
+          <Text style={styles.guestTitle}>Đăng nhập để xem lịch sử</Text>
+          <Text style={styles.guestSubtitle}>
+            Bạn cần đăng nhập để xem và quản lý các lượt đặt sân của mình.
+          </Text>
+          <TouchableOpacity style={styles.guestLoginBtn} onPress={() => router.push("/login")}>
+            <Text style={styles.guestLoginBtnText}>Đăng nhập</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.guestRegisterBtn} onPress={() => router.push("/register")}>
+            <Text style={styles.guestRegisterBtnText}>Tạo tài khoản mới</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -738,6 +759,64 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: colors.darkBg,
+  },
+  guestContainer: {
+    flex: 1,
+    backgroundColor: colors.lightBg,
+  },
+  guestContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.xl,
+  },
+  guestIcon: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
+  guestTitle: {
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    textAlign: "center",
+  },
+  guestSubtitle: {
+    fontSize: fonts.sizes.sm,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginBottom: spacing.xl,
+    lineHeight: 22,
+  },
+  guestLoginBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    width: "100%",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+    ...shadows.sm,
+  },
+  guestLoginBtnText: {
+    color: "#fff",
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.bold,
+  },
+  guestRegisterBtn: {
+    backgroundColor: colors.cardBg,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    width: "100%",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  guestRegisterBtnText: {
+    color: colors.primary,
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.semibold,
   },
   header: {
     flexDirection: "row",

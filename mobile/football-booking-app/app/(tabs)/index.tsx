@@ -59,10 +59,6 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
     fetchFields();
   }, [token]);
 
@@ -96,7 +92,6 @@ export default function HomeScreen() {
   const handleLogout = async () => {
     try {
       await logout();
-      router.replace("/login");
     } catch (error: any) {
       console.error("Logout error:", error);
       Alert.alert("Lỗi", "Đăng xuất thất bại");

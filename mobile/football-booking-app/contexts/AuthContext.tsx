@@ -66,24 +66,17 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
     }
   );
 
-  // ✅ Restore token on app start
+  // ✅ Always start as Guest — clear any stored session on app launch
   useEffect(() => {
     const bootstrapAsync = async () => {
-      let userToken = null;
-      let user = null;
       try {
-        userToken = await AsyncStorage.getItem("token");
-        const userJson = await AsyncStorage.getItem("user");
-        if (userJson) {
-          user = JSON.parse(userJson);
-        }
-        if (userToken) {
-          API.defaults.headers.common["Authorization"] = `Bearer ${userToken}`;
-        }
+        await AsyncStorage.removeItem("token");
+        await AsyncStorage.removeItem("user");
+        delete API.defaults.headers.common["Authorization"];
       } catch (e) {
-        console.log("Failed to restore session", e);
+        console.log("Failed to clear session on startup", e);
       }
-      dispatch({ type: "RESTORE_TOKEN", payload: { token: userToken, user } });
+      dispatch({ type: "RESTORE_TOKEN", payload: { token: null, user: null } });
     };
 
     bootstrapAsync();

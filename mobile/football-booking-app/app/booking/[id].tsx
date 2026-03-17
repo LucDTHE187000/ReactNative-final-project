@@ -115,10 +115,6 @@ export default function BookingDetail() {
   useEffect(() => {
     const fetchField = async () => {
       try {
-        if (!token) {
-          router.replace("/login");
-          return;
-        }
         const res = await API.get(`/fields/${fieldId}`);
         setField(res.data);
       } catch (err) {
@@ -320,6 +316,19 @@ export default function BookingDetail() {
    */
   const handleConfirm = async () => {
     if (!field) return;
+
+    // Guest chưa đăng nhập → chuyển sang trang login
+    if (!token) {
+      Alert.alert(
+        "Yêu cầu đăng nhập",
+        "Bạn cần đăng nhập để đặt sân.",
+        [
+          { text: "Hủy", style: "cancel" },
+          { text: "Đăng nhập", onPress: () => router.push("/login") },
+        ]
+      );
+      return;
+    }
 
     if (!selectedDate) {
       Alert.alert("Lỗi", "Vui lòng chọn ngày");
