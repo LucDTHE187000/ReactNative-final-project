@@ -266,11 +266,18 @@ router.post("/webhook", async (req, res) => {
 /**
  * Author: Lê Trần Trọng Đạt - mssv: HE194235
  * Param: bookingId (params)
- * Description: Query thẳng PayOS lấy trạng thái giao dịch thực tế, cập nhật DB nếu đã thanh toán
- *              Không phụ thuộc webhook — mobile gọi sau khi in-app browser đóng
+ * Description: Kiểm tra trạng thái payment — ưu tiên check DB trước (payment-result đã update),
+ *              fallback sang PayOS API nếu DB chưa có kết quả. Tránh race condition khi browser
+ *              đóng trước khi payment-result redirect hoàn thành.
  */
 router.get("/verify/:bookingId", protect, async (req, res) => {
   try {
+    // Bước 1: Check DB của mình trước — payment-result có thể đã update rồi
+    const booking = await Booking.findById(req.params.bookingId).select("paymentStatus status");
+    if (booking && booking.paymentStatus === "paid") {
+      return res.json({ status: "paid" });
+    }
+
     const payment = await Payment.findOne({ booking: req.params.bookingId })
       .sort({ createdAt: -1 });
 
@@ -278,7 +285,19 @@ router.get("/verify/:bookingId", protect, async (req, res) => {
       return res.json({ status: "not_found" });
     }
 
-    // Query trữ c tiếp từ PayOS
+    // Bước 2: Payment record đã "paid" chưa?
+    if (payment.status === "paid") {
+      // Đồng bộ sang Booking nếu chưa
+      await Booking.findByIdAndUpdate(req.params.bookingId, {
+        status: "confirmed",
+        paymentStatus: "paid",
+        paymentMethod: "qr",
+        paidAt: payment.paidAt || new Date(),
+      });
+      return res.json({ status: "paid" });
+    }
+
+    // Bước 3: Query trực tiếp từ PayOS
     const payosResult = await getPayOS().paymentRequests.get(payment.payosOrderCode);
     const payosStatus = payosResult.status; // "PAID" | "PENDING" | "CANCELLED" | "EXPIRED"
 
@@ -301,6 +320,13 @@ router.get("/verify/:bookingId", protect, async (req, res) => {
 
     res.json({ status: "pending" });
   } catch (error) {
+    // Fallback: nếu PayOS API lỗi, trả về trạng thái từ DB của mình
+    try {
+      const fallbackBooking = await Booking.findById(req.params.bookingId).select("paymentStatus");
+      if (fallbackBooking?.paymentStatus === "paid") {
+        return res.json({ status: "paid" });
+      }
+    } catch (_) { /* ignore */ }
     res.status(500).json({ message: error.message });
   }
 });

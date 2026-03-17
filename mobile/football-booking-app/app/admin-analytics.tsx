@@ -60,8 +60,10 @@ export default function AdminAnalyticsScreen() {
       const confirmed = allBookings.filter((b: Booking) => b.status === "confirmed").length;
       const pending = allBookings.filter((b: Booking) => b.status === "pending").length;
       const cancelled = allBookings.filter((b: Booking) => b.status === "cancelled").length;
-      const revenue = allBookings.reduce((sum: number, b: Booking) => sum + (b.totalPrice || 0), 0);
-      const avgPrice = total > 0 ? revenue / total : 0;
+      // Chỉ tính doanh thu từ booking đã xác nhận (tránh tính đơn chưa thanh toán hoặc đã hủy)
+      const paidBookings = allBookings.filter((b: Booking) => b.status === "confirmed");
+      const revenue = paidBookings.reduce((sum: number, b: Booking) => sum + (b.totalPrice || 0), 0);
+      const avgPrice = paidBookings.length > 0 ? revenue / paidBookings.length : 0;
 
       setStats({
         totalBookings: total,

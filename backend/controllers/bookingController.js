@@ -212,12 +212,27 @@ export const updateBookingStatus = async (req, res) => {
   }
 };
 
-// 📌 Delete booking (admin/fieldOwner xóa hẳn booking)
+/**
+ * Author: Dương Trọng Lực - mssv: HE187000
+ * Param: req.params.id - bookingId cần xóa
+ * Description: Xóa booking — cho phép: admin (toàn quyền), booking owner (user tạo đơn),
+ *              hoặc field owner (chủ sân có booking trên sân của mình)
+ */
 export const deleteBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id).populate("field", "owner");
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const isAdmin = req.user.role === "admin";
+    const isBookingOwner = booking.user.toString() === req.user._id.toString();
+    const isFieldOwner =
+      req.user.role === "fieldOwner" &&
+      booking.field?.owner?.toString() === req.user._id.toString();
+
+    if (!isAdmin && !isBookingOwner && !isFieldOwner) {
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     await Booking.findByIdAndDelete(req.params.id);

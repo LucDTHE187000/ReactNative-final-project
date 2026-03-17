@@ -55,30 +55,43 @@ export default function PaymentScreen() {
 
       // Mở in-app browser — promise resolve khi user đóng browser
       await WebBrowser.openBrowserAsync(checkoutUrl);
-
-      // Sau khi browser đóng: kiểm tra trạng thái payment
       setChecking(true);
-      try {
-        const statusRes = await API.get(`/payment/verify/${bookingInfo._id}`);
-        const payStatus = statusRes.data?.status;
 
-        if (payStatus === "paid") {
-          Alert.alert("✅ Thanh toán thành công", "Đơn đặt sân đã được xác nhận!", [
-            { text: "OK", onPress: () => router.replace("/(tabs)/bookings") },
-          ]);
-        } else {
-          Alert.alert(
-            "\u23f3 \u0110ang ch\u1edd x\u00e1c nh\u1eadn",
-            "Giao d\u1ecbch \u0111ang \u0111\u01b0\u1ee3c x\u1eed l\u00fd. Ki\u1ec3m tra trong m\u1ee5c L\u1ecbch s\u1eed.",
-            [{ text: "OK", onPress: () => router.replace("/(tabs)/bookings") }]
-          );
-          // Note: Vietnamese text kept ASCII-safe to avoid encoding issues
+      // Retry verify tối đa 3 lần (PayOS có thể xử lý chậm vài giây)
+      const MAX_RETRY = 3;
+      const RETRY_DELAY = 2000;
+      let paid = false;
+
+      for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+        try {
+          const statusRes = await API.get(`/payment/verify/${bookingInfo._id}`);
+          const payStatus = statusRes.data?.status;
+          if (payStatus === "paid") {
+            paid = true;
+            break;
+          }
+          if (payStatus === "cancelled" || payStatus === "expired") break;
+          // "pending" hoặc "not_found" → retry
+        } catch (_) {
+          // lỗi mạng → retry
         }
-      } catch {
-        router.replace("/(tabs)/bookings");
-      } finally {
-        setChecking(false);
       }
+
+      if (paid) {
+        Alert.alert(
+          "✅ Thanh toán thành công",
+          "Đơn đặt sân đã được ghi nhận!",
+          [{ text: "OK", onPress: () => router.replace("/(tabs)/bookings") }]
+        );
+      } else {
+        Alert.alert(
+          "⏳ Đang chờ xác nhận",
+          "Nếu bạn đã chuyển tiền, đơn hàng sẽ được cập nhật trong vài phút. Kiểm tra trong Lịch sử.",
+          [{ text: "OK", onPress: () => router.replace("/(tabs)/bookings") }]
+        );
+      }
+      setChecking(false);
     } catch (err: any) {
       setLoading(false);
       Alert.alert(

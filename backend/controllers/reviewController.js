@@ -19,8 +19,13 @@ export const createReview = async (req, res) => {
     if (booking.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized" });
     }
-    if (booking.paymentStatus !== "paid") {
-      return res.status(400).json({ message: "Chỉ đánh giá được booking đã thanh toán" });
+    // Cho phép đánh giá khi booking đã được xác nhận (confirmed) hoặc đã thanh toán
+    if (booking.status !== "confirmed" && booking.paymentStatus !== "paid") {
+      return res.status(400).json({ message: "Chỉ đánh giá được booking đã được xác nhận" });
+    }
+
+    if (!booking.field) {
+      return res.status(400).json({ message: "Sân không còn tồn tại, không thể đánh giá" });
     }
 
     const existing = await Review.findOne({ booking: bookingId });

@@ -45,6 +45,8 @@ export default function BookingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [approving, setApproving] = useState<string | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   // Rating state
   const [reviewedBookingIds, setReviewedBookingIds] = useState<Set<string>>(new Set());
@@ -122,8 +124,55 @@ export default function BookingsScreen() {
 
   /**
    * Author: Dương Trọng Lực - mssv: HE187000
+   * Param: bookingId - ID booking cần kiểm tra trạng thái thanh toán
+   * Description: Gọi verify endpoint để đồng bộ trạng thái PayOS về DB, sau đó refresh list
+   *              Dùng cho trường hợp web: browser mới đóng nhưng retry loop đã hết trước khi user chuyển tiền xong
+   */
+  const checkPaymentStatus = async (bookingId: string) => {
+    setCheckingPayment(bookingId);
+    try {
+      const res = await API.get(`/payment/verify/${bookingId}`);
+      const status = res.data?.status;
+      if (status === "paid") {
+        Alert.alert("✅ Thanh toán đã được ghi nhận!", "Đơn đặt sân đã được xác nhận.");
+        setSelectedBooking(null);
+        fetchBookings();
+      } else {
+        Alert.alert(
+          "⏳ Chưa ghi nhận",
+          "Hệ thống chưa nhận được xác nhận từ PayOS. Nếu đã chuyển tiền, vui lòng đợi 1-2 phút rồi kiểm tra lại."
+        );
+      }
+    } catch {
+      Alert.alert("Lỗi", "Không thể kiểm tra trạng thái lúc này");
+    } finally {
+      setCheckingPayment(null);
+    }
+  };
+
+  /**
+   * Author: Dương Trọng Lực - mssv: HE187000
+   * Param: bookingId - ID booking cần duyệt
+   * Description: Admin duyệt booking — gọi PUT /bookings/:id/approve
+   */
+  const doApproveBooking = async (bookingId: string) => {
+    setApproving(bookingId);
+    try {
+      await API.put(`/bookings/${bookingId}/approve`);
+      setSelectedBooking(null);
+      Alert.alert("Thành công", "Đơn đặt sân đã được xác nhận");
+      fetchBookings();
+    } catch (error: any) {
+      Alert.alert("Lỗi", error.response?.data?.message || "Không thể xác nhận booking");
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  /**
+   * Author: Dương Trọng Lực - mssv: HE187000
    * Param: bookingId - ID booking cần xóa
-   * Description: Gọi API DELETE xóa hẳn booking khỏi DB, chỉ admin có quyền
+   * Description: Gọi API DELETE xóa hẳn booking khỏi DB
    */
   const doDeleteBooking = async (bookingId: string) => {
     setDeleting(bookingId);
@@ -199,9 +248,10 @@ export default function BookingsScreen() {
       await API.post("/reviews", { bookingId: ratingBookingId, rating: ratingStars, comment: ratingComment });
       setReviewedBookingIds((prev) => new Set([...prev, ratingBookingId]));
       setRatingModalVisible(false);
-      Alert.alert("Cảm ơn!", "Đánh giá của bạn đã được ghi nhận ⭐");
+      Alert.alert("⭐ Cảm ơn!", "Đánh giá của bạn đã được ghi nhận!");
     } catch (error: any) {
-      Alert.alert("Lỗi", error.response?.data?.message || "Không thể gửi đánh giá");
+      const msg = error.response?.data?.message || error.message || "Không thể gởi đánh giá";
+      Alert.alert("❌ Lỗi", msg);
     } finally {
       setSubmittingReview(false);
     }
@@ -356,7 +406,7 @@ export default function BookingsScreen() {
                 <Text style={styles.detailButtonText}>🔍 Xem chi tiết</Text>
               </TouchableOpacity>
 
-              {!isAdmin && item.paymentStatus === "paid" && !reviewedBookingIds.has(item._id) && (
+              {!isAdmin && item.status === "confirmed" && !reviewedBookingIds.has(item._id) && (
                 <TouchableOpacity
                   style={styles.reviewButton}
                   onPress={() => openRatingModal(item._id, item.field?.name || item.fieldName)}
@@ -364,10 +414,35 @@ export default function BookingsScreen() {
                   <Text style={styles.reviewButtonText}>⭐ Đánh giá</Text>
                 </TouchableOpacity>
               )}
-              {!isAdmin && item.paymentStatus === "paid" && reviewedBookingIds.has(item._id) && (
+              {!isAdmin && item.status === "confirmed" && reviewedBookingIds.has(item._id) && (
                 <View style={styles.reviewedBadge}>
                   <Text style={styles.reviewedText}>✅ Đã đánh giá</Text>
                 </View>
+              )}
+
+              {/* Nút xóa — hiển thị ở mọi trạng thái */}
+              {!isAdmin && (
+                <TouchableOpacity
+                  style={styles.deleteFromHistoryBtn}
+                  disabled={deleting === item._id}
+                  onPress={() => handleDeleteBooking(item._id)}
+                >
+                  <Text style={styles.deleteFromHistoryText}>🗑️ Xóa</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Kiểm tra thanh toán — hiển khi chưa thanh toán */}
+              {!isAdmin && item.paymentStatus === "unpaid" && item.status !== "cancelled" && (
+                <TouchableOpacity
+                  style={styles.verifyPaymentBtn}
+                  disabled={checkingPayment === item._id}
+                  onPress={() => checkPaymentStatus(item._id)}
+                >
+                  {checkingPayment === item._id
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={styles.verifyPaymentText}>🔄 Kiểm tra TT</Text>
+                  }
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -442,8 +517,8 @@ export default function BookingsScreen() {
                   {/* User actions (non-admin only) */}
                   {!isAdmin && (
                     <View style={styles.modalActions}>
-                      {/* QR Ticket khi đã thanh toán */}
-                      {selectedBooking.paymentStatus === "paid" && (
+                      {/* QR Ticket khi đã xác nhận */}
+                      {selectedBooking.status === "confirmed" && (
                         <View style={styles.qrContainer}>
                           <Text style={styles.qrTitle}>🎟️ Vé Vào Sân</Text>
                           <View style={styles.qrBox}>
@@ -462,8 +537,8 @@ export default function BookingsScreen() {
                         </View>
                       )}
 
-                      {/* Đánh giá sau khi đã thanh toán */}
-                      {selectedBooking.paymentStatus === "paid" &&
+                      {/* Đánh giá sau khi đã xác nhận */}
+                      {selectedBooking.status === "confirmed" &&
                         !reviewedBookingIds.has(selectedBooking._id) && (
                           <TouchableOpacity
                             style={styles.reviewButton}
@@ -479,12 +554,26 @@ export default function BookingsScreen() {
                           </TouchableOpacity>
                         )}
 
-                      {selectedBooking.paymentStatus === "paid" &&
+                      {selectedBooking.status === "confirmed" &&
                         reviewedBookingIds.has(selectedBooking._id) && (
                           <View style={styles.reviewedBadge}>
                             <Text style={styles.reviewedText}>✅ Đã đánh giá</Text>
                           </View>
                         )}
+
+                      {/* Kiểm tra thanh toán trong modal */}
+                      {selectedBooking.paymentStatus === "unpaid" && selectedBooking.status !== "cancelled" && (
+                        <TouchableOpacity
+                          style={[styles.verifyPaymentBtn, { paddingVertical: spacing.lg }]}
+                          disabled={checkingPayment === selectedBooking._id}
+                          onPress={() => checkPaymentStatus(selectedBooking._id)}
+                        >
+                          {checkingPayment === selectedBooking._id
+                            ? <ActivityIndicator color="#fff" size="small" />
+                            : <Text style={styles.verifyPaymentText}>🔄 Kiểm tra trạng thái thanh toán</Text>
+                          }
+                        </TouchableOpacity>
+                      )}
 
                       {/* Cập nhật */}
                       {selectedBooking.status !== "cancelled" && !isPastDate(selectedBooking.date) && (
@@ -502,7 +591,7 @@ export default function BookingsScreen() {
                         </TouchableOpacity>
                       )}
 
-                      {/* Xóa đơn */}
+                      {/* Hủy đặt sân */}
                       {canCancel(selectedBooking) && (
                         <TouchableOpacity
                           style={[styles.cancelButton, cancelling === selectedBooking._id && styles.cancelButtonDisabled]}
@@ -511,16 +600,41 @@ export default function BookingsScreen() {
                         >
                           {cancelling === selectedBooking._id
                             ? <ActivityIndicator color="#fff" size="small" />
-                            : <Text style={styles.cancelText}>🗑️ Xóa đơn</Text>
+                            : <Text style={styles.cancelText}>❌ Hủy đặt sân</Text>
                           }
                         </TouchableOpacity>
                       )}
+
+                      {/* Xóa booking — tất cả trạng thái */}
+                      <TouchableOpacity
+                        style={[styles.deleteButton, deleting === selectedBooking._id && styles.cancelButtonDisabled]}
+                        disabled={deleting === selectedBooking._id}
+                        onPress={() => handleDeleteBooking(selectedBooking._id)}
+                      >
+                        {deleting === selectedBooking._id
+                          ? <ActivityIndicator color="#fff" size="small" />
+                          : <Text style={styles.cancelText}>🗑️ Xóa khỏi lịch sử</Text>
+                        }
+                      </TouchableOpacity>
                     </View>
                   )}
 
                   {/* Admin actions */}
                   {isAdmin && (
                     <View style={styles.modalActions}>
+                      {/* Admin duyệt khi đơn đang chờ */}
+                      {selectedBooking.status === "pending" && (
+                        <TouchableOpacity
+                          style={[styles.approveButton, approving === selectedBooking._id && styles.cancelButtonDisabled]}
+                          disabled={approving === selectedBooking._id}
+                          onPress={() => doApproveBooking(selectedBooking._id)}
+                        >
+                          {approving === selectedBooking._id
+                            ? <ActivityIndicator color="#fff" size="small" />
+                            : <Text style={styles.cancelText}>✅ Xác nhận đơn</Text>
+                          }
+                        </TouchableOpacity>
+                      )}
                       {canCancel(selectedBooking) && (
                         <TouchableOpacity
                           style={[styles.cancelButton, cancelling === selectedBooking._id && styles.cancelButtonDisabled]}
@@ -771,6 +885,16 @@ const styles = StyleSheet.create({
     paddingBottom: spacing["5xl"],
     maxHeight: "90%",
   },
+  // Rating modal: flex layout để ScrollView scroll được, button không bị ẩn
+  ratingModalContainer: {
+    backgroundColor: colors.cardBg,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    maxHeight: "85%",
+    flex: 0,
+  },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -834,6 +958,24 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.sm,
   },
+  approveButton: {
+    backgroundColor: "#2E7D32",
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    alignItems: "center",
+  },
+  verifyPaymentBtn: {
+    backgroundColor: "#1565C0",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    alignItems: "center",
+  },
+  verifyPaymentText: {
+    color: "#fff",
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.xs,
+  },
   cancelButton: {
     backgroundColor: colors.error,
     paddingVertical: spacing.lg,
@@ -854,6 +996,19 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.sm,
+  },
+  deleteFromHistoryBtn: {
+    backgroundColor: "#37474F",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  deleteFromHistoryText: {
+    color: colors.textSecondary,
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.semibold,
   },
   submitReviewBtn: {
     backgroundColor: colors.primary,

@@ -52,10 +52,10 @@ export default function ProfileScreen() {
         cancelledBookings: bookings.filter(
           (b: any) => b.status === "cancelled"
         ).length,
-        totalSpent: bookings.reduce(
-          (sum: number, b: any) => sum + (b.totalPrice || 0),
-          0
-        ),
+        // Chỉ cộng những booking đã thanh toán thành công
+        totalSpent: bookings
+          .filter((b: any) => b.paymentStatus === "paid")
+          .reduce((sum: number, b: any) => sum + (b.totalPrice || 0), 0),
       };
 
       // Fetch field count for admin

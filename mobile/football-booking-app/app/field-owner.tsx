@@ -55,6 +55,7 @@ export default function FieldOwnerPanel() {
   const [submitting, setSubmitting] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [processingBooking, setProcessingBooking] = useState<string | null>(null);
+  const [deletingBooking, setDeletingBooking] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -102,6 +103,39 @@ export default function FieldOwnerPanel() {
 
   /**
    * Author: Dương Trọng Lực - mssv: HE187000
+   * Param: bookingId - ID booking trên sân của mình cần xóa
+   * Description: Thực hiện xóa booking trên sân của chủ sân, sau đó refresh danh sách
+   */
+  const doDeleteBookingOnField = async (bookingId: string) => {
+    setDeletingBooking(bookingId);
+    try {
+      await API.delete(`/bookings/${bookingId}`);
+      Alert.alert("Thành công", "Đã xóa đơn đặt sân");
+      fetchFieldBookings();
+    } catch (error: any) {
+      Alert.alert("Lỗi", error.response?.data?.message || "Không thể xóa");
+    } finally {
+      setDeletingBooking(null);
+    }
+  };
+
+  const handleDeleteBookingOnField = (bookingId: string) => {
+    Alert.alert(
+      "Xác nhận xóa",
+      "Xóa đơn đặt sân này? Thao tác không thể hoàn tác.",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: () => doDeleteBookingOnField(bookingId),
+        },
+      ]
+    );
+  };
+
+  /**
+   * Author: Dương Trọng Lực - mssv: HE187000
    * Param: bookingId - ID booking cần duyệt/từ chối
    * Description: Approve hoặc reject booking từ field owner panel
    */
@@ -135,7 +169,15 @@ export default function FieldOwnerPanel() {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchFields();
+    Promise.all([fetchFields(), fetchFieldBookings()]).finally(() =>
+      setRefreshing(false)
+    );
+  };
+
+  // RefreshControl riêng cho tab bookings (không ảnh hưởng fields loading state)
+  const handleRefreshBookings = () => {
+    setRefreshing(true);
+    fetchFieldBookings().finally(() => setRefreshing(false));
   };
 
   const openModal = (field?: Field) => {
@@ -424,7 +466,7 @@ export default function FieldOwnerPanel() {
           keyExtractor={(item) => item._id}
           contentContainerStyle={{ paddingBottom: 20 }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchFieldBookings().finally(() => setRefreshing(false)); }} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefreshBookings} />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -439,10 +481,17 @@ export default function FieldOwnerPanel() {
               <View style={[styles.bookingCard, { borderLeftColor: statusColor }]}>
                 <View style={styles.bookingHeader}>
                   <Text style={styles.bookingField}>{item.field?.name || "—"}</Text>
-                  <View style={[styles.bookingBadge, { backgroundColor: statusColor }]}>
-                    <Text style={styles.bookingBadgeText}>
-                      {item.status === "confirmed" ? "Đã xác nhận" : item.status === "cancelled" ? "Đã hủy" : "Chờ duyệt"}
-                    </Text>
+                  <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <View style={[styles.bookingBadge, { backgroundColor: statusColor }]}>
+                      <Text style={styles.bookingBadgeText}>
+                        {item.status === "confirmed" ? "Đã xác nhận" : item.status === "cancelled" ? "Đã hủy" : "Chờ duyệt"}
+                      </Text>
+                    </View>
+                    <View style={[styles.bookingBadge, { backgroundColor: item.paymentStatus === "paid" ? "#2E7D32" : "#E65100" }]}>
+                      <Text style={styles.bookingBadgeText}>
+                        {item.paymentStatus === "paid" ? "✅ Đã TT" : "⏳ Chưa TT"}
+                      </Text>
+                    </View>
                   </View>
                 </View>
                 <Text style={styles.bookingInfo}>👤 {item.user?.name || "—"} • {item.user?.email || ""}</Text>
@@ -471,6 +520,17 @@ export default function FieldOwnerPanel() {
                     </TouchableOpacity>
                   </View>
                 )}
+                {/* Xóa booking trên sân của mình — mọi trạng thái */}
+                <TouchableOpacity
+                  style={[styles.deleteBookingBtn, deletingBooking === item._id && { opacity: 0.6 }]}
+                  disabled={deletingBooking === item._id}
+                  onPress={() => handleDeleteBookingOnField(item._id)}
+                >
+                  {deletingBooking === item._id
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={styles.actionBtnText}>🗑️ Xóa đơn</Text>
+                  }
+                </TouchableOpacity>
               </View>
             );
           }}
@@ -640,7 +700,7 @@ const styles = StyleSheet.create({
   emptyButtonText: {
     color: colors.textPrimary,
     fontWeight: fonts.weights.bold,
-    fontSize: fonts.sizes.md,
+    fontSize: fonts.sizes.base,
   },
   header: {
     backgroundColor: colors.cardBg,
@@ -687,7 +747,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: colors.textPrimary,
     fontWeight: fonts.weights.bold,
-    fontSize: fonts.sizes.md,
+    fontSize: fonts.sizes.base,
   },
   card: {
     backgroundColor: colors.cardBg,
@@ -721,7 +781,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   priceInfo: {
-    fontSize: fonts.sizes.md,
+    fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.semibold,
     color: colors.primary,
     marginTop: spacing.sm,
@@ -799,7 +859,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   label: {
-    fontSize: fonts.sizes.md,
+    fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.semibold,
     color: colors.textPrimary,
     marginTop: spacing.md,
@@ -925,7 +985,7 @@ const styles = StyleSheet.create({
   },
   tabBtnText: {
     color: colors.textSecondary,
-    fontSize: fonts.sizes.sm,
+    fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.semibold,
   },
   tabBtnTextActive: {
@@ -948,7 +1008,7 @@ const styles = StyleSheet.create({
   },
   bookingField: {
     color: colors.textPrimary,
-    fontSize: fonts.sizes.md,
+    fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.bold,
     flex: 1,
     marginRight: 8,
@@ -970,7 +1030,7 @@ const styles = StyleSheet.create({
   },
   bookingPrice: {
     color: colors.primary,
-    fontSize: fonts.sizes.md,
+    fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.bold,
     marginTop: 4,
   },
@@ -1002,5 +1062,12 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.sm,
+  },
+  deleteBookingBtn: {
+    backgroundColor: "#37474F",
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    alignItems: "center",
+    marginTop: spacing.sm,
   },
 });

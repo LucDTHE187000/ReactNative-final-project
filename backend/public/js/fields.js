@@ -49,8 +49,8 @@ function renderFields(fields) {
     fieldsGrid.innerHTML = fields.map(field => {
         const imageUrl = field.image ? field.image : '/images/default.jpg';
         const price = field.pricePerHour || 0;
-        const rating = 4.0; // Default rating
-        const ratingCount = 15; // Default count
+        const rating = field.avgRating ? field.avgRating.toFixed(1) : null;
+        const ratingCount = field.reviewCount || 0;
 
         return `
             <div class="field-card" onclick="goToBooking('${field._id}')">
@@ -62,8 +62,7 @@ function renderFields(fields) {
                     <h3 class="field-name">${field.name}</h3>
                     <div class="field-location">${field.location}</div>
                     <div class="field-rating">
-                        <span class="stars">★ ${rating}</span>
-                        <span class="rating-count">(${ratingCount})</span>
+                        ${rating ? `<span class="stars">★ ${rating}</span><span class="rating-count">(${ratingCount})</span>` : `<span class="rating-count">Chưa có đánh giá</span>`}
                     </div>
                     <div class="field-footer">
                         <div>
