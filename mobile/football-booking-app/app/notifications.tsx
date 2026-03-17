@@ -11,7 +11,7 @@ import {
 import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import API from "../services/api";
-import { colors, fonts, spacing, radius } from "../constants/theme";
+import { colors, fonts, spacing, radius, shadows } from "../constants/theme";
 
 interface Notification {
   _id: string;
@@ -212,17 +212,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingTop: 50,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
-    backgroundColor: colors.cardBg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: colors.headerBg,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: spacing.sm,
+    ...shadows.lg,
   },
   backBtn: {
     marginRight: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
   backBtnText: {
-    color: colors.primary,
+    color: "#FFFFFF",
     fontSize: fonts.sizes.sm,
   },
   headerCenter: {
@@ -231,7 +239,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontSize: fonts.sizes.lg,
     fontWeight: fonts.weights.bold,
   },
@@ -253,8 +261,10 @@ const styles = StyleSheet.create({
   markAllBtn: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    backgroundColor: colors.primary,
+    backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
   markAllText: {
     color: "#fff",
@@ -283,10 +293,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderLeftWidth: 3,
     borderLeftColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   notifCardUnread: {
     borderLeftColor: colors.primary,
-    backgroundColor: "#1C2A3A",
+    backgroundColor: "#F0F9F3",
   },
   notifIcon: {
     width: 40,
@@ -296,6 +309,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   notifIconText: {
     fontSize: 18,

@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.xl,
-    ...shadows.lg,
+    ...shadows.sm,
   },
   detailRow: {
     flexDirection: "row",
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.xl,
-    ...shadows.lg,
+    ...shadows.sm,
   },
   breakdownItem: {
     flexDirection: "row",
@@ -375,12 +375,12 @@ const styles = StyleSheet.create({
   totalAmount: {
     fontSize: fonts.sizes.xl,
     fontWeight: fonts.weights.bold,
-    color: colors.warning,
+    color: colors.accentOrange,
   },
   payosInfoCard: {
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: colors.accentOrangeLight,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: `${colors.accentOrange}50`,
     borderRadius: radius.lg,
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.xl,
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   payosInfoTitle: {
     fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.bold,
-    color: colors.primary,
+    color: colors.accentOrange,
     marginBottom: spacing.md,
   },
   payosInfoDesc: {
@@ -403,13 +403,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: "center",
     marginBottom: spacing.xl,
-    ...shadows.lg,
+    ...shadows.md,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   payButtonText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
   },

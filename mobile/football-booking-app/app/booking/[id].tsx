@@ -612,13 +612,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    ...shadows.lg,
+    ...shadows.sm,
   },
   cardTitle: {
     fontSize: fonts.sizes.lg,
     fontWeight: fonts.weights.bold,
     color: colors.textPrimary,
     marginBottom: spacing.lg,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+    paddingLeft: spacing.sm,
   },
   row: {
     flexDirection: "row",
@@ -642,12 +645,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: spacing.xl,
+    ...shadows.md,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.bold,
   },
@@ -670,7 +674,7 @@ const styles = StyleSheet.create({
   priceAmount: {
     fontSize: fonts.sizes.sm,
     fontWeight: fonts.weights.bold,
-    color: colors.primary,
+    color: colors.accentOrange,
   },
   priceNote: {
     fontSize: fonts.sizes.xs,
@@ -688,7 +692,7 @@ const styles = StyleSheet.create({
   },
   calendarNavBtn: {
     padding: spacing.md,
-    backgroundColor: colors.cardOverlay,
+    backgroundColor: colors.lightBg,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
@@ -796,14 +800,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.cardOverlay,
+    backgroundColor: colors.cardBg,
     minWidth: 72,
     alignItems: "center",
   },
   timeBtnBooked: {
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderColor: "transparent",
-    opacity: 0.4,
+    backgroundColor: colors.lightBg,
+    borderColor: colors.border,
+    opacity: 0.5,
   },
   timeBtnSelected: {
     backgroundColor: colors.primary,
@@ -829,9 +833,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   timeRangeDisplay: {
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: colors.accentOrangeLight,
     borderWidth: 1,
-    borderColor: `${colors.primary}30`,
+    borderColor: `${colors.accentOrange}40`,
     padding: spacing.lg,
     borderRadius: radius.md,
     alignItems: "center",
@@ -840,7 +844,7 @@ const styles = StyleSheet.create({
   timeRangeText: {
     fontSize: fonts.sizes.sm,
     fontWeight: fonts.weights.bold,
-    color: colors.primary,
+    color: colors.accentOrange,
   },
 
   // Services
@@ -851,12 +855,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.border,
   },
   serviceItemSelected: {
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: `${colors.primary}10`,
     borderColor: colors.primary,
   },
   serviceCheckbox: {
@@ -868,6 +872,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+    backgroundColor: colors.cardBg,
   },
   serviceCheckboxSelected: {
     backgroundColor: colors.primary,
@@ -894,7 +899,7 @@ const styles = StyleSheet.create({
   servicePrice: {
     fontSize: 13,
     fontWeight: "bold",
-    color: colors.primary,
+    color: colors.accentOrange,
     marginLeft: 8,
   },
 
@@ -934,6 +939,6 @@ const styles = StyleSheet.create({
   summaryTotalValue: {
     fontSize: fonts.sizes.lg,
     fontWeight: fonts.weights.bold,
-    color: colors.primary,
+    color: colors.accentOrange,
   },
 });

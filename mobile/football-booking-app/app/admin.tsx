@@ -225,7 +225,7 @@ export default function AdminPanel() {
 
   const handleDelete = (fieldId: string) => {
     if (Platform.OS === "web") {
-      if (window.confirm("Bạn chắc chắn muốn xóa sân này?")) {
+      if (globalThis.confirm("Bạn chắc chắn muốn xóa sân này?")) {
         performDelete(fieldId);
       }
       return;
@@ -477,65 +477,69 @@ const styles = StyleSheet.create({
     backgroundColor: colors.darkBg,
   },
   header: {
-    backgroundColor: colors.cardBg,
+    backgroundColor: colors.headerBg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
     paddingTop: spacing.md,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: spacing.sm,
     ...shadows.lg,
   },
   title: {
     fontSize: fonts.sizes["2xl"],
     fontWeight: fonts.weights.bold,
-    color: colors.textPrimary,
+    color: "#FFFFFF",
   },
   subtitle: {
     fontSize: fonts.sizes.xs,
-    color: colors.textSecondary,
+    color: "rgba(255,255,255,0.7)",
     marginTop: spacing.sm,
   },
   logoutButton: {
-    backgroundColor: colors.error,
+    backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
   logoutText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.xs,
   },
   addButton: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.primary,
     marginHorizontal: spacing.lg,
-    marginVertical: spacing.lg,
+    marginVertical: spacing.md,
     paddingVertical: spacing.lg,
     borderRadius: radius.md,
     alignItems: "center",
+    ...shadows.md,
   },
   addButtonText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.base,
   },
   card: {
     backgroundColor: colors.cardBg,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: "hidden",
-    ...shadows.lg,
+    ...shadows.sm,
   },
   cardImage: {
     width: "100%",
     height: 180,
-    backgroundColor: colors.darkBg,
+    backgroundColor: colors.lightBg,
   },
   cardContent: {
     flex: 1,
@@ -546,18 +550,18 @@ const styles = StyleSheet.create({
     fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.bold,
     color: colors.textPrimary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   fieldInfo: {
     fontSize: fonts.sizes.xs,
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   priceInfo: {
     fontSize: fonts.sizes.sm,
-    color: colors.primary,
+    color: colors.accentOrange,
     fontWeight: fonts.weights.bold,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   actions: {
     flexDirection: "row",
@@ -567,31 +571,31 @@ const styles = StyleSheet.create({
   },
   editButton: {
     flex: 1,
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     alignItems: "center",
   },
   editText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.sm,
   },
   deleteButton: {
     flex: 1,
-    backgroundColor: colors.error,
+    backgroundColor: "#C62828",
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     alignItems: "center",
   },
   deleteText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.sm,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "rgba(0,0,0,0.55)",
     justifyContent: "flex-end",
   },
   modalContent: {
@@ -600,8 +604,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.xl,
     maxHeight: "90%",
     paddingBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   modalHeader: {
     flexDirection: "row",
@@ -612,6 +614,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    backgroundColor: colors.lightBg,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
   },
   modalTitle: {
     fontSize: fonts.sizes.lg,
@@ -630,7 +635,7 @@ const styles = StyleSheet.create({
     fontSize: fonts.sizes.sm,
     fontWeight: fonts.weights.semibold,
     color: colors.textPrimary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     marginTop: spacing.lg,
   },
   input: {
@@ -640,7 +645,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: fonts.sizes.base,
-    backgroundColor: colors.cardOverlay,
+    backgroundColor: colors.inputBg,
     color: colors.textPrimary,
   },
   typeButtons: {
@@ -655,10 +660,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: spacing.lg,
     alignItems: "center",
+    backgroundColor: colors.cardBg,
   },
   typeButtonActive: {
-    backgroundColor: colors.secondary,
-    borderColor: colors.secondary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   typeButtonText: {
     fontSize: fonts.sizes.sm,
@@ -666,7 +672,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   typeButtonTextActive: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
   },
   imagePreviewContainer: {
     marginBottom: spacing.md,
@@ -678,27 +684,27 @@ const styles = StyleSheet.create({
   imagePreview: {
     width: "100%",
     height: 200,
-    backgroundColor: colors.darkBg,
+    backgroundColor: colors.lightBg,
   },
   removeImageButton: {
-    backgroundColor: colors.error,
+    backgroundColor: "#C62828",
     padding: spacing.sm,
     alignItems: "center",
   },
   removeImageText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.xs,
   },
   imagePicker: {
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.accentOrange,
     paddingVertical: spacing.lg,
     borderRadius: radius.md,
     alignItems: "center",
     marginBottom: spacing.md,
   },
   imagePickerText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
   },
   modalActions: {
@@ -714,6 +720,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     borderRadius: radius.md,
     alignItems: "center",
+    backgroundColor: colors.cardBg,
   },
   cancelButtonText: {
     fontWeight: fonts.weights.semibold,
@@ -722,7 +729,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flex: 1,
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.primary,
     paddingVertical: spacing.lg,
     borderRadius: radius.md,
     alignItems: "center",
@@ -732,7 +739,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontWeight: fonts.weights.bold,
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontSize: fonts.sizes.sm,
   },
 });

@@ -732,8 +732,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.darkBg,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -745,22 +743,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.headerBg,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: spacing.md,
+    ...shadows.lg,
   },
   title: {
     fontSize: fonts.sizes["2xl"],
     fontWeight: fonts.weights.bold,
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     flex: 1,
   },
   logoutButton: {
-    backgroundColor: colors.error,
+    backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
   logoutText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.xs,
   },
@@ -770,15 +776,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+    marginHorizontal: spacing.lg,
     borderLeftWidth: 4,
     borderLeftColor: colors.primary,
     borderWidth: 1,
     borderColor: colors.border,
-    ...shadows.lg,
+    ...shadows.sm,
   },
   cardHeader: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   singleName: {
     fontSize: fonts.sizes.base,
@@ -797,7 +804,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   statusText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontSize: fonts.sizes.xs,
     fontWeight: fonts.weights.bold,
   },
@@ -827,7 +834,7 @@ const styles = StyleSheet.create({
   },
   priceValue: {
     fontSize: fonts.sizes.sm,
-    color: colors.primary,
+    color: colors.accentOrange,
     fontWeight: fonts.weights.bold,
     flex: 1,
     textAlign: "right",
@@ -846,7 +853,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailButtonText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.xs,
   },
@@ -869,13 +876,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   emptyButtonText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
   },
   // ── Modal ──
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.55)",
     justifyContent: "flex-end",
   },
   modalContainer: {
@@ -887,7 +894,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing["5xl"],
     maxHeight: "90%",
   },
-  // Rating modal: flex layout để ScrollView scroll được, button không bị ẩn
   ratingModalContainer: {
     backgroundColor: colors.cardBg,
     borderTopLeftRadius: radius.xl,
@@ -902,6 +908,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: spacing.xl,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: fonts.sizes.xl,
@@ -922,9 +931,11 @@ const styles = StyleSheet.create({
   modalInfoCard: {
     backgroundColor: colors.lightBg,
     borderRadius: radius.lg,
-    padding: spacing.xl,
-    marginTop: spacing.xl,
-    marginBottom: spacing.xl,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalRow: {
     flexDirection: "row",
@@ -950,13 +961,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   updateButton: {
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.accentOrange,
     paddingVertical: spacing.lg,
     borderRadius: radius.md,
     alignItems: "center",
   },
   updateButtonText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.sm,
   },
@@ -995,12 +1006,12 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   cancelText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.sm,
   },
   deleteFromHistoryBtn: {
-    backgroundColor: "#37474F",
+    backgroundColor: colors.lightBg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.sm,
@@ -1031,6 +1042,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.xl,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   qrTitle: {
     fontSize: fonts.sizes.base,
@@ -1042,6 +1055,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     backgroundColor: "#fff",
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   qrHint: {
     fontSize: fonts.sizes.xs,
@@ -1052,26 +1067,28 @@ const styles = StyleSheet.create({
   // ── Review / Rating ──
   reviewButton: {
     flex: 1,
-    backgroundColor: "#FF9800",
+    backgroundColor: "#F57C00",
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     alignItems: "center",
     marginTop: spacing.lg,
   },
   reviewButtonText: {
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.xs,
   },
   reviewedBadge: {
-    backgroundColor: "#1B5E20",
+    backgroundColor: "#E8F5E9",
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     alignItems: "center",
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: "#A5D6A7",
   },
   reviewedText: {
-    color: "#A5D6A7",
+    color: "#2E7D32",
     fontWeight: fonts.weights.bold,
     fontSize: fonts.sizes.sm,
   },
@@ -1095,7 +1112,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   commentInput: {
-    backgroundColor: colors.lightBg,
+    backgroundColor: colors.inputBg,
     borderRadius: radius.md,
     padding: spacing.lg,
     color: colors.textPrimary,

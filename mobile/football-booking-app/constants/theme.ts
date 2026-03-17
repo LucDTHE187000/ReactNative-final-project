@@ -8,31 +8,39 @@ import { Platform } from 'react-native';
 // ========== COLORS ==========
 export const colors = {
   // Primary & Secondary
-  primary: '#00BCD4',      // Cyan
-  secondary: '#1E88E5',    // Blue
+  primary: '#1B6F3A',          // Forest green
+  secondary: '#E8613C',        // Orange/coral (CTA, prices)
 
   // Background
-  darkBg: '#0F1419',
-  cardBg: '#1A1F2E',
-  lightBg: '#2C3E50',
+  darkBg: '#F2F8F4',           // Light mint page background
+  cardBg: '#FFFFFF',           // White cards
+  lightBg: '#E8F5E9',          // Light green section background
 
   // Text
-  textPrimary: '#FFFFFF',
-  textSecondary: '#B0BEC5',
+  textPrimary: '#1A2B1E',      // Near-black (dark text on light bg)
+  textSecondary: '#607B64',    // Medium green-gray
 
   // Border & UI
-  border: '#2C3E50',
+  border: '#C3E4CB',           // Soft green border
 
   // Status
-  success: '#4CAF50',
-  error: '#FF6B6B',
-  errorLight: 'rgba(244, 67, 54, 0.1)',
-  warning: '#FFB800',
-  warningLight: 'rgba(255, 184, 0, 0.1)',
+  success: '#16A34A',
+  error: '#DC2626',
+  errorLight: 'rgba(220, 38, 38, 0.10)',
+  warning: '#D97706',
+  warningLight: 'rgba(217, 119, 6, 0.10)',
 
   // Transparent/Overlay
-  overlay: 'rgba(15, 20, 25, 0.95)',
-  cardOverlay: 'rgba(255, 255, 255, 0.05)',
+  overlay: 'rgba(21, 87, 36, 0.97)',   // Dark green overlay
+  cardOverlay: 'rgba(27, 111, 58, 0.05)',
+
+  // Extended design tokens
+  headerBg: '#155724',         // Very dark green for headers/navbars
+  accentOrange: '#E8613C',     // Orange accent for prices & primary CTAs
+  accentOrangeLight: '#FFF1EE',// Light orange background
+  greenTag: '#E8F5E9',         // Tag background
+  greenTagText: '#1B6F3A',     // Tag text color
+  inputBg: '#F9FCF9',          // Input background
 } as const;
 
 // ========== FONTS ==========
