@@ -39,6 +39,7 @@ function RootLayoutContent() {
               <>
                 <Stack.Screen name="admin" options={{ headerShown: false, title: 'Quản Lý Sân' }} />
                 <Stack.Screen name="admin-analytics" options={{ headerShown: true, title: 'Thống Kê' }} />
+                <Stack.Screen name="admin-users" options={{ headerShown: false, title: 'Quản Lý Tài Khoản' }} />
               </>
             )}
           </>

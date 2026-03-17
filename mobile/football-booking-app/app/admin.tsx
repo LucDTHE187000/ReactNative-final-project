@@ -28,6 +28,7 @@ interface Field {
   type: string;
   pricePerHour: number;
   isActive: boolean;
+  image?: string;
 }
 
 export default function AdminPanel() {

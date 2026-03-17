@@ -10,7 +10,6 @@ import {
   RefreshControl,
   Modal,
   TextInput,
-  Platform,
 } from "react-native";
 import API from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +22,8 @@ interface UserStats {
   cancelledBookings: number;
   totalSpent: number;
   totalFields?: number;
+  totalUsers?: number;
+  totalFieldOwners?: number;
 }
 
 export default function ProfileScreen() {
@@ -58,13 +59,21 @@ export default function ProfileScreen() {
           .reduce((sum: number, b: any) => sum + (b.totalPrice || 0), 0),
       };
 
-      // Fetch field count for admin
+      // Fetch admin-only stats
       if (user?.role === "admin") {
         try {
-          const fieldsRes = await API.get("/fields");
+          const [fieldsRes, usersRes] = await Promise.all([
+            API.get("/fields"),
+            API.get("/admin/users"),
+          ]);
           stats.totalFields = fieldsRes.data.length;
+          const allUsers: any[] = usersRes.data;
+          stats.totalUsers = allUsers.filter((u) => u.role === "user").length;
+          stats.totalFieldOwners = allUsers.filter((u) => u.role === "fieldOwner").length;
         } catch {
           stats.totalFields = 0;
+          stats.totalUsers = 0;
+          stats.totalFieldOwners = 0;
         }
       }
 
@@ -165,9 +174,11 @@ export default function ProfileScreen() {
         { text: "Hủy", onPress: () => {} },
         {
           text: "Đăng xuất",
-          onPress: async () => {
-            await logout();
-            router.replace("/login");
+          onPress: () => {
+            void (async () => {
+              await logout();
+              router.replace("/login");
+            })();
           },
         },
       ]
@@ -246,6 +257,22 @@ export default function ProfileScreen() {
                 {stats.totalFields}
               </Text>
               <Text style={styles.statLabel}>Tổng Sân Hiện Tại</Text>
+            </View>
+          )}
+          {user?.role === "admin" && stats.totalUsers !== undefined && (
+            <View style={styles.statCard}>
+              <Text style={[styles.statValue, { color: "#4CAF50" }]}>
+                {stats.totalUsers}
+              </Text>
+              <Text style={styles.statLabel}>Người Dùng</Text>
+            </View>
+          )}
+          {user?.role === "admin" && stats.totalFieldOwners !== undefined && (
+            <View style={styles.statCard}>
+              <Text style={[styles.statValue, { color: "#FF9800" }]}>
+                {stats.totalFieldOwners}
+              </Text>
+              <Text style={styles.statLabel}>Chủ Sân</Text>
             </View>
           )}
         </View>
@@ -337,6 +364,27 @@ export default function ProfileScreen() {
             <Text style={styles.actionArrow}>›</Text>
           </TouchableOpacity>
         )}
+
+        {user?.role === "admin" && (
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => router.push("/admin-users" as any)}
+          >
+            <Text style={styles.actionIcon}>👥</Text>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Quản Lý Tài Khoản</Text>
+              <Text style={styles.actionDesc}>Quản lý user và chủ sân</Text>
+            </View>
+            {stats && (stats.totalUsers ?? 0) + (stats.totalFieldOwners ?? 0) > 0 && (
+              <View style={styles.userCountBadge}>
+                <Text style={styles.userCountBadgeText}>
+                  {(stats?.totalUsers ?? 0) + (stats?.totalFieldOwners ?? 0)}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.actionArrow}>›</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Account Settings */}
@@ -346,7 +394,11 @@ export default function ProfileScreen() {
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>Vai Trò</Text>
           <Text style={styles.settingValue}>
-            {user?.role === "admin" ? "Admin" : user?.role === "fieldOwner" ? "Chủ Sân" : "Người Dùng"}
+            {(() => {
+              if (user?.role === "admin") return "Admin";
+              if (user?.role === "fieldOwner") return "Chủ Sân";
+              return "Người Dùng";
+            })()}
           </Text>
         </View>
 
@@ -532,11 +584,9 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.cardBg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
+    backgroundColor: colors.cardBg,
   },
   statCard: {
     width: "50%",
@@ -662,6 +712,21 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   unreadBadgeText: {
+    color: "#fff",
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.bold,
+  },
+  userCountBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    minWidth: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    marginRight: spacing.xs,
+  },
+  userCountBadgeText: {
     color: "#fff",
     fontSize: fonts.sizes.xs,
     fontWeight: fonts.weights.bold,

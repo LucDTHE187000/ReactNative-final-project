@@ -150,3 +150,75 @@ export const getRevenueByMonth = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+/**
+ * Author: Dương Trọng Lực - mssv: HE187000
+ * Param: none
+ * Description: Trả về danh sách tất cả người dùng (không bao gồm password) cho admin
+ */
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Author: Dương Trọng Lực - mssv: HE187000
+ * Param: req.params.id - ID người dùng cần xóa
+ * Description: Xóa người dùng khỏi hệ thống, không cho phép xóa admin
+ */
+export const deleteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (user.role === "admin") {
+      return res.status(403).json({ message: "Cannot delete admin account" });
+    }
+    await user.deleteOne();
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Author: Dương Trọng Lực - mssv: HE187000
+ * Param: req.params.id - bookingId; req.body.status - trạng thái mới
+ * Description: Admin cập nhật trạng thái booking (confirmed/cancelled/pending)
+ */
+export const adminUpdateBookingStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    booking.status = status;
+    await booking.save();
+    res.json(booking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Author: Dương Trọng Lực - mssv: HE187000
+ * Param: none
+ * Description: Admin lấy tất cả bookings với thông tin user và field đầy đủ, sắp xếp mới nhất trước
+ */
+export const getAllBookingsAdmin = async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate("user", "name email role")
+      .populate("field", "name location type pricePerHour")
+      .sort({ createdAt: -1 });
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

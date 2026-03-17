@@ -82,7 +82,9 @@ export default function BookingsScreen() {
       const res = await API.get("/reviews/my");
       const ids = new Set<string>(res.data.map((r: any) => r.booking));
       setReviewedBookingIds(ids);
-    } catch (_) {}
+    } catch (e) {
+      console.log("fetchMyReviews error:", e);
+    }
   };
 
   useFocusEffect(
@@ -191,7 +193,7 @@ export default function BookingsScreen() {
 
   const handleDeleteBooking = (bookingId: string) => {
     if (Platform.OS === "web") {
-      if (window.confirm("Bạn chắc chắn muốn xóa booking này? Thao tác này không thể hoàn tác.")) {
+      if (globalThis.confirm("Bạn chắc chắn muốn xóa booking này? Thao tác này không thể hoàn tác.")) {
         doDeleteBooking(bookingId);
       }
       return;
@@ -208,7 +210,7 @@ export default function BookingsScreen() {
 
   const handleCancelBooking = (bookingId: string) => {
     if (Platform.OS === "web") {
-      if (window.confirm("Bạn chắc chắn muốn hủy đặt sân này?")) {
+      if (globalThis.confirm("Bạn chắc chắn muốn hủy đặt sân này?")) {
         doCancelBooking(bookingId);
       }
       return;

@@ -29,6 +29,7 @@ interface Field {
   pricePerHour: number;
   isActive: boolean;
   owner: string;
+  image?: string;
 }
 
 interface FieldBooking {
@@ -128,7 +129,7 @@ export default function FieldOwnerPanel() {
         {
           text: "Xóa",
           style: "destructive",
-          onPress: () => doDeleteBookingOnField(bookingId),
+          onPress: () => { void doDeleteBookingOnField(bookingId); },
         },
       ]
     );
@@ -164,6 +165,7 @@ export default function FieldOwnerPanel() {
       }
       fetchFields();
       fetchFieldBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token, user])
   );
 
@@ -211,7 +213,7 @@ export default function FieldOwnerPanel() {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
@@ -225,7 +227,8 @@ export default function FieldOwnerPanel() {
           type: asset.type === "image" ? "image/jpeg" : "image/png",
         });
       }
-    } catch (error) {
+    } catch (e) {
+      console.error("Image picker error:", e);
       Alert.alert("Lỗi", "Không thể chọn ảnh");
     }
   };
@@ -308,7 +311,7 @@ export default function FieldOwnerPanel() {
 
   const handleDelete = (fieldId: string) => {
     if (Platform.OS === "web") {
-      if (window.confirm("Bạn chắc chắn muốn xóa sân này?")) {
+      if (globalThis.confirm("Bạn chắc chắn muốn xóa sân này?")) {
         performDelete(fieldId);
       }
       return;
@@ -379,7 +382,7 @@ export default function FieldOwnerPanel() {
           onPress={() => setActiveTab("bookings")}
         >
           <Text style={[styles.tabBtnText, activeTab === "bookings" && styles.tabBtnTextActive]}>
-            📋 Đơn Đặt Sân {fieldBookings.filter((b) => b.status === "pending").length > 0
+            📋 Đơn Đặt Sân {fieldBookings.some((b) => b.status === "pending")
               ? `(${fieldBookings.filter((b) => b.status === "pending").length})`
               : ""}
           </Text>
@@ -474,7 +477,12 @@ export default function FieldOwnerPanel() {
             </View>
           }
           renderItem={({ item }) => {
-            const statusColor = item.status === "confirmed" ? "#4CAF50" : item.status === "cancelled" ? "#EF5350" : "#FFA726";
+            let statusColor = "#FFA726";
+            if (item.status === "confirmed") statusColor = "#4CAF50";
+            else if (item.status === "cancelled") statusColor = "#EF5350";
+            let statusLabel = "Chờ duyệt";
+            if (item.status === "confirmed") statusLabel = "Đã xác nhận";
+            else if (item.status === "cancelled") statusLabel = "Đã hủy";
             const parts = item.date?.substring(0, 10).split("-") ?? [];
             const dateStr = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : item.date;
             return (
@@ -484,7 +492,7 @@ export default function FieldOwnerPanel() {
                   <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
                     <View style={[styles.bookingBadge, { backgroundColor: statusColor }]}>
                       <Text style={styles.bookingBadgeText}>
-                        {item.status === "confirmed" ? "Đã xác nhận" : item.status === "cancelled" ? "Đã hủy" : "Chờ duyệt"}
+                        {statusLabel}
                       </Text>
                     </View>
                     <View style={[styles.bookingBadge, { backgroundColor: item.paymentStatus === "paid" ? "#2E7D32" : "#E65100" }]}>
